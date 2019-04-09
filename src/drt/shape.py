@@ -55,12 +55,12 @@ class SphereShape(Shape):
         D = B * B - C
         #print("D", D.shape, D.dtype)
         #MASK_D = D > zero
-        MASK_D = is_positive(D)
+        MASK_D = is_positive(D).reshape((1, H, W))
         #print("MASK", MASK.shape, MASK.dtype)
         #zero = np.zeros((1, H, W), np.float32)
         tx = -B - F.sqrt(F.absolute(D))
-        MASK_T0 = is_positive(tx - t0)
-        MASK_T1 = is_positive(t1 - tx)
+        MASK_T0 = is_positive(tx - t0).reshape((1, H, W))
+        MASK_T1 = is_positive(t1 - tx).reshape((1, H, W))
         #print("tx", tx.shape)
         #print("t0", t0.shape)
         #print("t1", t1.shape)
@@ -76,6 +76,67 @@ class SphereShape(Shape):
         n = vnorm(p - so)
         #print(n.shape, n.dtype)
         return b, t, p, n
+
+
+class PlaneShape(Shape):
+    def __init__(self, origin, normal):
+        self.origin = origin
+        self.normal = normal
+    
+    def intersect(self, ro, rd, t0, t1):
+        """
+        dot(so - p, sn) = 0
+        ro + t * rd = p
+        """
+        # dot(so, sn) - dot(p, sn) = 0
+        # dot(so, sn) - dot((ro + t * rd), sn) = 0
+        # dot(so, sn) - dot(ro, sn) - dot(rd, sn) * t = 0
+        # t = ((so, sn) - (ro, sn)) / (rd, n)
+        # t = (so - ro, sn) / (rd, sn)
+        C, H, W = ro.shape[:3]
+        so = self.origin
+        so = F.broadcast_to(so.reshape((3, 1, 1)), (C, H, W))
+        sn = self.normal
+        sn = F.broadcast_to(sn.reshape((3, 1, 1)), (C, H, W))
+        A = vdot(so - ro, sn)
+        B = vdot(rd, sn)
+        tx = A / B
+        MASK_B = is_positive(F.absolute(B)).reshape((1, H, W))
+        MASK_T0 = is_positive(tx - t0).reshape((1, H, W))
+        MASK_T1 = is_positive(t1 - tx).reshape((1, H, W))
+
+        b = F.cast(MASK_B * MASK_T0 * MASK_T1, 'bool')
+        #print("MASK_B", MASK_B.shape)
+        #print("b", b.shape)
+        t = F.where(b, tx, t1)
+
+        p = ro + tx * rd
+        #print(p.shape, p.dtype)
+        bn = F.cast(is_positive(vdot(rd, sn)).reshape((1, H, W)), 'bool')
+        n = F.where(bn, -sn, sn)
+        #print(n.shape, n.dtype)
+        return b, t, p, n
+
+
+class CompositeShape(Shape):
+    def __init__(self, shapes):
+        self.shapes = shapes
+
+    def intersect(self, ro, rd, t0, t1):
+        s = self.shapes[0]
+        t = t1
+        b, t, p, n = s.intersect(ro, rd, t0, t)
+        for s in self.shapes[1:]:
+            bb, t, pp, nn = s.intersect(ro, rd, t0, t)
+            p = F.where(bb, pp, p)
+            n = F.where(bb, nn, n)
+            b = b + bb
+        return b, t, p, n
+
+
+
+
+
 
 
         
