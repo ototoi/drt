@@ -1,22 +1,11 @@
+from .base_light import BaseLight
+
 import numpy as np
 import chainer
 import chainer.functions as F 
 
 
-def vdot(a, b):
-    m = a * b
-    return F.sum(m, axis=0)
-
-
-class Light(object):
-    def __init__(self):
-        pass
-
-    def illuminate(self, info):
-        pass
-
-
-class PointLight(Light):
+class PointLight(BaseLight):
     def __init__(self, origin, color):
         self.origin = origin
         self.color = color
@@ -32,4 +21,3 @@ class PointLight(Light):
         di = p - lo
         #dl = F.sqrt(vdot(di, di))
         return di, lc
-
