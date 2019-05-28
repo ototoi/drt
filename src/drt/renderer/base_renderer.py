@@ -5,11 +5,9 @@ import chainer.backend
 from chainer import Variable
 
 
-class BaseMaterial(object):
+class BaseRenderer(object):
     def __init__(self):
         pass
-
-    def set_parameters(self, info):
+    
+    def render(self, info):
         pass
-
-

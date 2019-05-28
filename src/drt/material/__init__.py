@@ -1,2 +1,1 @@
-from .base_material import BaseMaterial
-from .normal_material import NormalMaterial
+from .diffuse_material import DiffuseMaterial

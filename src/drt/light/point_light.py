@@ -2,13 +2,14 @@ from .base_light import BaseLight
 
 import numpy as np
 import chainer
-import chainer.functions as F 
+import chainer.functions as F
+from ..utils import make_parameter as  MP
 
 
 class PointLight(BaseLight):
     def __init__(self, origin, color):
-        self.origin = origin
-        self.color = color
+        self.origin = MP(origin)
+        self.color = MP(color)
 
     
     def illuminate(self, info):

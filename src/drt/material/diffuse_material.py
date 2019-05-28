@@ -5,23 +5,24 @@ import chainer.backend
 from chainer import Variable
 
 from .base_material import BaseMaterial
+from ..utils import make_parameter as  MP
 
 class DiffuseMaterial(BaseMaterial):
-    def __init__(self):
-        pass
+    def __init__(self, albedo=[1,1,1]):
+        self.albedo = MP(albedo)
+        self.zero_ = MP([0])
 
-    def render(self, info: dict):
-        b = info['b']
-        n = info['n']
 
-        bb = b
-        nn = n
-        _, H, W = nn.shape[:3]
-        bb = F.transpose(bb, (1, 2, 0))
-        #mask = F.cast(bb, "float32")
-        mask = F.where(bb, np.ones((H, W, 1), nn.dtype), np.zeros((H, W, 1), nn.dtype))
-        nn = F.transpose(nn, (1, 2, 0))
-        nn = 0.5 * (nn + 1)
-        img = F.clip(nn * mask, 0.0, 1.0)
+    def set_parameters(self, info):
+        mask = info['b']
+        _, H, W = mask.shape[:3]
+        if 'albedo' in info:
+            albedo_old = info['albedo']
+            albedo_new = F.broadcast_to(self.albedo.reshape((3, 1, 1)), (3, H, W))
+            info['albedo'] = F.where(mask, albedo_new, albedo_old)
+        else:
+            albedo_old = F.broadcast_to(self.zero_.reshape((1, 1, 1)), (3, H, W))
+            albedo_new = F.broadcast_to(self.albedo.reshape((3, 1, 1)), (3, H, W))
+            info['albedo'] = F.where(mask, albedo_new, albedo_old)
+        return info
 
-        return img

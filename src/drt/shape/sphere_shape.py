@@ -7,6 +7,7 @@ from chainer import Variable
 
 from .base_shape import BaseShape
 from ..vec import vdot, vnorm
+from ..utils import make_parameter as MP
 
 
 def is_positive(a):
@@ -15,8 +16,13 @@ def is_positive(a):
 
 class SphereShape(BaseShape):
     def __init__(self, origin, radius):
-        self.origin = origin
-        self.radius = radius
+        self.origin = MP(origin)
+        self.radius = MP(radius)
+        self.albedo_ = MP([1, 0, 1])
+        #if self.radius.shape[0] == 1:
+        #    self.radius = F.tile(self.radius, (3, ))
+        #print(self.origin.shape)
+        #print(self.radius.shape)
 
     def intersect(self, ro, rd, t0, t1):
         """
@@ -33,6 +39,8 @@ class SphereShape(BaseShape):
         sr2 = sr * sr
         sr2 = F.broadcast_to(sr2.reshape((1, 1, 1)), (1, H, W))
         rs = ro - so
+        a = self.albedo_
+        a = F.broadcast_to(a.reshape((3, 1, 1)), (C, H, W))
         #print("so", so.shape, so.dtype)
         #print("rs", rs.shape, rs.dtype)
         B = vdot(rs, rd)
@@ -59,4 +67,4 @@ class SphereShape(BaseShape):
         #print(p.shape, p.dtype)
         n = vnorm(p - so)
         #print(n.shape, n.dtype)
-        return b, t, p, n
+        return {'b': b, 't': t, 'p': p, 'n': n, 'albedo': a}

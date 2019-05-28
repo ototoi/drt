@@ -4,16 +4,17 @@ import chainer.functions as F
 import chainer.backend
 from chainer import Variable
 
-from .base_material import BaseMaterial
+from .base_renderer import BaseRenderer
+from ..utils import make_parameter as  MP
 
-class NormalMaterial(BaseMaterial):
+class NormalRenderer(BaseRenderer):
     def __init__(self):
         pass
 
     def render(self, info: dict):
         b = info['b']
         n = info['n']
-
+        
         bb = b
         nn = n
         _, H, W = nn.shape[:3]

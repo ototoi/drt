@@ -7,6 +7,7 @@ from chainer import Variable
 
 from .base_shape import BaseShape
 from ..vec import vdot, vnorm
+from ..utils import make_parameter as MP
 
 
 def is_positive(a):
@@ -15,8 +16,9 @@ def is_positive(a):
 
 class PlaneShape(BaseShape):
     def __init__(self, origin, normal):
-        self.origin = origin
-        self.normal = normal
+        self.origin = MP(origin)
+        self.normal = MP(normal)
+        self.albedo_ = MP([1, 0, 1])
     
     def intersect(self, ro, rd, t0, t1):
         """
@@ -33,6 +35,8 @@ class PlaneShape(BaseShape):
         so = F.broadcast_to(so.reshape((3, 1, 1)), (C, H, W))
         sn = self.normal
         sn = F.broadcast_to(sn.reshape((3, 1, 1)), (C, H, W))
+        a = self.albedo_
+        a = F.broadcast_to(a.reshape((3, 1, 1)), (C, H, W))
         A = vdot(so - ro, sn)
         B = vdot(rd, sn)
         tx = A / B
@@ -50,4 +54,4 @@ class PlaneShape(BaseShape):
         bn = F.cast(is_positive(vdot(rd, sn)).reshape((1, H, W)), 'bool')
         n = F.where(bn, -sn, sn)
         #print(n.shape, n.dtype)
-        return b, t, p, n
+        return {'b':b, 't':t, 'p':p, 'n':n, 'albedo':a}

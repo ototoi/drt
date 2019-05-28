@@ -2,7 +2,7 @@ import numpy as np
 import chainer
 import chainer.functions as F 
 
-class Light(object):
+class BaseLight(object):
     def __init__(self):
         pass
 

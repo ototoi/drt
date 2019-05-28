@@ -1,1 +1,1 @@
-from .vec_functions import vdot, vnorm
+from .vec_functions import vdot, vnorm, vcross
