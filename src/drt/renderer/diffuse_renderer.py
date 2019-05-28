@@ -28,6 +28,7 @@ class DiffuseRenderer(BaseRenderer):
         bb = F.transpose(bb, (1, 2, 0))
         #mask = F.cast(bb, "float32")
         mask = F.where(bb, np.ones((H, W, 1), nn.dtype), np.zeros((H, W, 1), nn.dtype))
+        nn = vnorm(nn)
         nn = F.transpose(nn, (1, 2, 0))
         albedo = F.transpose(albedo, (1, 2, 0))
         for l in ll:
@@ -39,6 +40,6 @@ class DiffuseRenderer(BaseRenderer):
             dd = F.sum(dd, axis=2).reshape((H, W, 1))
             dd = F.maximum(dd, self.zero_)
 
-        img = F.clip(lc * albedo * dd * mask, 0.0, 1.0)
+        img = F.clip(albedo * dd * mask, 0.0, 1.0)
 
         return img
