@@ -22,6 +22,6 @@ class AlbedoRenderer(BaseRenderer):
         b = F.transpose(b, (0, 2, 3, 1))
         albedo = F.transpose(albedo, (0, 2, 3, 1))
         mask = F.where(b, np.ones((B, H, W, 1), albedo.dtype), np.zeros((B, H, W, 1), albedo.dtype))
-        img = F.clip(albedo * mask, 0.0, 1.0)
-        
+        img = albedo * mask
+
         return img

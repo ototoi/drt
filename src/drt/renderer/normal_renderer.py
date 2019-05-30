@@ -19,6 +19,6 @@ class NormalRenderer(BaseRenderer):
         mask = F.where(b, np.ones((B, H, W, 1), n.dtype), np.zeros((B, H, W, 1), n.dtype))
         n = F.transpose(n, (0, 2, 3, 1))
         n = 0.5 * (n + 1)
-        img = F.clip(n * mask, 0.0, 1.0)
+        img = n * mask #
 
         return img

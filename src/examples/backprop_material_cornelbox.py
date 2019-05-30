@@ -92,13 +92,12 @@ def create_tallblock(materials):
     cmps = MaterizedShape(CompositeShape([a, b, c, d, e]), mat_w)
     return cmps
 
+
+START_POS = [300, 545, 300]
+GOAL_POS  = [300, 545, 300]
+
 class RaytraceFunc(object):
-    def __init__(self):
-        materials = {}
-        materials["light"] = DiffuseMaterial([1.0, 1.0, 1.0])
-        materials["white"] = DiffuseMaterial([0.5, 0.5, 0.5])
-        materials["green"] = DiffuseMaterial([0.0, 1.0, 0.0])
-        materials["red"] = DiffuseMaterial([1.0, 0.0, 0.0])
+    def __init__(self, materials):
         #shape_light = create_light(materials)
         shape_floor = create_floor(materials)
         shape_shortblock = create_shortblock(materials)
@@ -114,12 +113,15 @@ class RaytraceFunc(object):
         self.shape = shape
         self.renderer = renderer
 
-    def __call__(self, x):
-        B = x.shape[0]
+    def __call__(self, B):
         ro, rd = self.cam.shoot()
         C, H, W = ro.shape[:3]
-        ro = F.broadcast_to(ro.reshape((1, C, H, W)), (B, C, H, W))
-        rd = F.broadcast_to(rd.reshape((1, C, H, W)), (B, C, H, W))
+        ro = ro.reshape((1, C, H, W))
+        rd = rd.reshape((1, C, H, W))
+        if B != 1:
+            ro = F.broadcast_to(ro, (B, C, H, W))
+            rd = F.broadcast_to(rd, (B, C, H, W))
+
         t0 = MP(np.broadcast_to(
             np.array([0.01], np.float32).reshape((1, 1, 1, 1)), (B, 1, H, W)))
         t1 = MP(np.broadcast_to(
@@ -130,14 +132,13 @@ class RaytraceFunc(object):
         info['rd'] = rd
 
         #x = x[0, :].reshape((1, 3))
-        l = PointLight(origin=x, color=[0.1, 0.1, 0.1])
+        l = PointLight(origin=START_POS, color=[0.1, 0.1, 0.1])
         info['ll'] = [l]
         img = self.renderer.render(info)
         return img
 
 def compute_loss(data1, data2):
     return F.mean_squared_error(data1, data2)
-
 
 def save_progress_image(odir, i, img):
     path = os.path.join(odir, '{0:08d}.png'.format(i))
@@ -151,24 +152,26 @@ class RaytraceUpdater(StandardUpdater):
         self.odir = odir
         self.count = 0
 
-
     def update_core(self):
         train_iter = self.get_iterator('main')
         optimizer  = self.get_optimizer('main')
 
         batch = train_iter.next()
         t_data = self.converter(batch, self.device)
-        x_data = self.model.data.reshape((1, 3))
-        y_data = self.func(x_data)
+        #x_data = self.model.data.reshape((1, 3))
+        
         B, C, H, W = t_data.shape[:4]
+
+        y_data = self.func(B)
+
         y_data = F.broadcast_to(y_data, (B, C, H, W))
         loss = compute_loss(y_data, t_data)
 
         reporter.report({
             'main/loss': loss,
-            'pos/light_x': self.model.data[0],
-            'pos/light_y': self.model.data[1],
-            'pos/light_z': self.model.data[2]
+            'left/r': self.model.data[0],
+            'left/g': self.model.data[1],
+            'left/b': self.model.data[2]
         })
 
         img = y_data.data[0]
@@ -199,17 +202,21 @@ class RaytraceDataset(DatasetMixin):
         return self.img
 
 
-START_POS = [300, 545, 300]
-GOAL_POS  = [300, 540, 300]
-
 
 def draw_goal_cornelbox(output):
+    materials = {}
+    materials["light"] = DiffuseMaterial([1.0, 1.0, 1.0])
+    materials["white"] = DiffuseMaterial([0.5, 0.5, 0.5])
+    materials["green"] = DiffuseMaterial([0.0, 1.0, 0.0])
+    materials["red"] = DiffuseMaterial([0.0, 1.0, 0.0])
+
+
     light = np.array(GOAL_POS, dtype=np.float32)
     model = ArrayLink(light)
-    func = RaytraceFunc()
+    func = RaytraceFunc(materials)
 
-    x_data = model.data.reshape((1, 3))
-    imgs = func(x_data)
+    #x_data = model.data.reshape((1, 3))
+    imgs = func(1)
     imgs = imgs.data
     img = imgs[0]
     img = np.transpose(img, (1, 2, 0))
@@ -222,12 +229,19 @@ def draw_goal_cornelbox(output):
 
 
 def draw_start_cornelbox(output):
-    light = np.array(START_POS, dtype=np.float32)
-    model = ArrayLink(light)
-    func = RaytraceFunc()
+    materials = {}
+    materials["light"] = DiffuseMaterial([1.0, 1.0, 1.0])
+    materials["white"] = DiffuseMaterial([0.5, 0.5, 0.5])
+    materials["green"] = DiffuseMaterial([0.0, 1.0, 0.0])
+    materials["red"] = DiffuseMaterial([1.0, 0.01, 0.01])
 
-    x_data = model.data.reshape((1, 3))
-    imgs = func(x_data)
+
+    light = np.array(START_POS, dtype=np.float32)
+    #model = ArrayLink(light)
+    func = RaytraceFunc(materials)
+
+    #x_data = model.data.reshape((1, 3))
+    imgs = func(1)
     imgs = imgs.data
     img = imgs[0]
     img = np.transpose(img, (1, 2, 0))
@@ -240,12 +254,24 @@ def draw_start_cornelbox(output):
 
 
 def calc_goal_cornelbox(output):
-    epoch = 50
+
+    model = ArrayLink(np.array([1.0, 0.01, 0.01], dtype=np.float32))
+    
+
+    materials = {}
+    materials["light"] = DiffuseMaterial([1.0, 1.0, 1.0])
+    materials["white"] = DiffuseMaterial([0.5, 0.5, 0.5])
+    materials["green"] = DiffuseMaterial([0.0, 1.0, 0.0])
+    materials["red"] = DiffuseMaterial(model.data)
+
+    epoch = 100
 
     outdir = os.path.dirname(output)
-    light = np.array(START_POS, dtype=np.float32)
-    model = ArrayLink(light)
-    func = RaytraceFunc()
+    
+
+    func = RaytraceFunc(materials)
+
+    
 
     chainer.config.autotune = True
     chainer.cudnn_fast_batch_normalization = True
@@ -272,9 +298,9 @@ def calc_goal_cornelbox(output):
             'epoch',
             'iteration',
             'main/loss',
-            'pos/light_x',
-            'pos/light_y',
-            'pos/light_z',
+            'left/r',
+            'left/g',
+            'left/b',
         ]), trigger=log_interval)
     trainer.extend(extensions.ProgressBar(update_interval=1))
 
@@ -298,9 +324,9 @@ def process(args):
 def main() -> int:
     parser = argparse.ArgumentParser(description='DRT')
     parser.add_argument(
-        '--goal', '-g', default='./data/backprop_light_cornelbox/goal.png', help='output file directory path')
+        '--goal', '-g', default='./data/backprop_material_cornelbox/goal.png', help='output file directory path')
     parser.add_argument(
-        '--start', '-s', default='./data/backprop_light_cornelbox/start.png', help='output file directory path')
+        '--start', '-s', default='./data/backprop_material_cornelbox/start.png', help='output file directory path')
     args = parser.parse_args()
     return process(args)
 

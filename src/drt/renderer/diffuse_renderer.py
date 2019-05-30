@@ -37,7 +37,7 @@ class DiffuseRenderer(BaseRenderer):
             dd = F.sum(dd, axis=3).reshape((B, H, W, 1))
             dd = F.maximum(dd, self.zero_)
 
-        img = F.clip(albedo * dd * mask, 0.0, 1.0)
+        img = albedo * dd * mask
         img = F.transpose(img, (0, 3, 1, 2))
 
         return img
