@@ -92,51 +92,6 @@ def create_tallblock(materials):
     cmps = MaterizedShape(CompositeShape([a, b, c, d, e]), mat_w)
     return cmps
 
-"""
-def draw_cornelbox_0(output):
-    materials = {}
-    materials["light"] = DiffuseMaterial([1.0, 1.0, 1.0])
-    materials["white"] = DiffuseMaterial([0.5, 0.5, 0.5])
-    materials["green"] = DiffuseMaterial([0.0, 1.0, 0.0])
-    materials["red"] = DiffuseMaterial([1.0, 0.0, 0.0])
-    shape_light = create_light(materials)
-    shape_floor = create_floor(materials)
-    shape_shortblock = create_shortblock(materials)
-    shape_tallblock = create_tallblock(materials)
-
-    cmps = CompositeShape([shape_light, shape_floor, shape_shortblock, shape_tallblock])
-    
-    fov = math.atan2(0.025, 0.035) * 180.0 / math.pi
-    #fov = math.atan2(0.035, 0.025) * 180.0 / math.pi
-    cam = PerspectiveCamera(512, 512, fov, [278.0, 273.0, -800.0])
-    ro, rd = cam.shoot()
-    C, H, W = ro.shape[:3]
-    t0 = MP(np.broadcast_to(
-        np.array([0.01], np.float32).reshape((1, 1, 1)), (1, H, W)))
-    t1 = MP(np.broadcast_to(
-        np.array([10000], np.float32).reshape((1, 1, 1)), (1, H, W)))
-    #print("t0", t0.shape)
-    #print("t1", t1.shape)
-    info = cmps.intersect(ro, rd, t0, t1)
-    info['ro'] = ro
-    info['rd'] = rd
-    l = PointLight(origin=[300, 548, 300], color=[0.1, 0.1, 0.1])
-    info['ll'] = [l]
-    #print("b", b.shape)
-
-    renderer = DiffuseRenderer()
-    #renderer = AlbedoRenderer()
-    img = renderer.render(info)
-
-    img = img.data
-    img = (img * 255).astype(np.uint8)
-    if output is not None:
-        os.makedirs(os.path.dirname(output), exist_ok=True)
-        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-        cv2.imwrite(output, img)
-    return 0
-"""
-
 class RaytraceFunc(object):
     def __init__(self):
         materials = {}
@@ -144,11 +99,11 @@ class RaytraceFunc(object):
         materials["white"] = DiffuseMaterial([0.5, 0.5, 0.5])
         materials["green"] = DiffuseMaterial([0.0, 1.0, 0.0])
         materials["red"] = DiffuseMaterial([1.0, 0.0, 0.0])
-        shape_light = create_light(materials)
+        #shape_light = create_light(materials)
         shape_floor = create_floor(materials)
         shape_shortblock = create_shortblock(materials)
         shape_tallblock = create_tallblock(materials)
-        shape = CompositeShape([shape_light, shape_floor, shape_shortblock, shape_tallblock])
+        shape = CompositeShape([shape_floor, shape_shortblock, shape_tallblock])
 
         fov = math.atan2(0.025, 0.035) * 180.0 / math.pi
         cam = PerspectiveCamera(512, 512, fov, [278.0, 273.0, -800.0])
@@ -179,9 +134,6 @@ class RaytraceFunc(object):
         info['ll'] = [l]
         img = self.renderer.render(info)
         return img
-
-
-
 
 def compute_loss(data1, data2):
     return F.mean_squared_error(data1, data2)
@@ -229,13 +181,53 @@ class RaytraceDataset(DatasetMixin):
 
     def get_example(self, i):
         return self.img
-    
 
-def draw_cornelbox_1(output):
-    epoch = 1000
+
+START_POS = [300, 545, 300]
+GOAL_POS  = [300, 540, 300]
+
+
+def draw_goal_cornelbox(output):
+    light = np.array(GOAL_POS, dtype=np.float32)
+    model = ArrayLink(light)
+    func = RaytraceFunc()
+
+    x_data = model.data.reshape((1, 3))
+    imgs = func(x_data)
+    imgs = imgs.data
+    img = imgs[0]
+    img = np.transpose(img, (1, 2, 0))
+    img = np.clip(img * 255, 0, 255).astype(np.uint8)
+
+    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+
+    cv2.imwrite(output, img)
+    return 0
+
+
+def draw_start_cornelbox(output):
+    light = np.array(START_POS, dtype=np.float32)
+    model = ArrayLink(light)
+    func = RaytraceFunc()
+
+    x_data = model.data.reshape((1, 3))
+    imgs = func(x_data)
+    imgs = imgs.data
+    img = imgs[0]
+    img = np.transpose(img, (1, 2, 0))
+    img = np.clip(img * 255, 0, 255).astype(np.uint8)
+
+    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+
+    cv2.imwrite(output, img)
+    return 0
+
+
+def calc_goal_cornelbox(output):
+    epoch = 100
 
     outdir = os.path.dirname(output)
-    light = np.array([300, 545, 300], dtype=np.float32)
+    light = np.array(START_POS, dtype=np.float32)
     model = ArrayLink(light)
     func = RaytraceFunc()
 
@@ -276,9 +268,13 @@ def draw_cornelbox_1(output):
 
 
 def process(args):
-    output = args.output
-    #ret = draw_cornelbox_0(output)
-    ret = draw_cornelbox_1(output)
+    start = args.start
+    goal = args.goal
+    os.makedirs(os.path.dirname(start), exist_ok=True)
+    os.makedirs(os.path.dirname(goal), exist_ok=True)
+    ret = draw_start_cornelbox(start)
+    ret = draw_goal_cornelbox(goal)
+    ret = calc_goal_cornelbox(goal)
 
     return ret
 
@@ -286,7 +282,9 @@ def process(args):
 def main() -> int:
     parser = argparse.ArgumentParser(description='DRT')
     parser.add_argument(
-        '--output', '-o', default='./data/backprop_cornelbox/first.png', help='output file directory path')
+        '--goal', '-g', default='./data/backprop_light_cornelbox/goal.png', help='output file directory path')
+    parser.add_argument(
+        '--start', '-s', default='./data/backprop_light_cornelbox/start.png', help='output file directory path')
     args = parser.parse_args()
     return process(args)
 

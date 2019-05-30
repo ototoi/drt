@@ -14,15 +14,11 @@ class NormalRenderer(BaseRenderer):
     def render(self, info: dict):
         b = info['b']
         n = info['n']
-        
-        bb = b
-        nn = n
-        _, H, W = nn.shape[:3]
-        bb = F.transpose(bb, (1, 2, 0))
-        #mask = F.cast(bb, "float32")
-        mask = F.where(bb, np.ones((H, W, 1), nn.dtype), np.zeros((H, W, 1), nn.dtype))
-        nn = F.transpose(nn, (1, 2, 0))
-        nn = 0.5 * (nn + 1)
-        img = F.clip(nn * mask, 0.0, 1.0)
+        B, _, H, W = n.shape[:4]
+        b = F.transpose(b, (0, 2, 3, 1))
+        mask = F.where(b, np.ones((B, H, W, 1), n.dtype), np.zeros((B, H, W, 1), n.dtype))
+        n = F.transpose(n, (0, 2, 3, 1))
+        n = 0.5 * (n + 1)
+        img = F.clip(n * mask, 0.0, 1.0)
 
         return img

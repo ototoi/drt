@@ -17,12 +17,11 @@ class AlbedoRenderer(BaseRenderer):
     def render(self, info: dict):
         b = info['b']
         albedo = info['albedo']
-        _, H, W = b.shape[:3]
+        B, _, H, W = b.shape[:4]
 
-        bb = b
-        bb = F.transpose(bb, (1, 2, 0))
-        mask = F.where(bb, np.ones((H, W, 1), albedo.dtype), np.zeros((H, W, 1), albedo.dtype))
-        albedo = F.transpose(albedo, (1, 2, 0))
+        b = F.transpose(b, (0, 2, 3, 1))
+        albedo = F.transpose(albedo, (0, 2, 3, 1))
+        mask = F.where(b, np.ones((B, H, W, 1), albedo.dtype), np.zeros((B, H, W, 1), albedo.dtype))
         img = F.clip(albedo * mask, 0.0, 1.0)
-
+        
         return img
