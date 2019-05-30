@@ -14,11 +14,15 @@ class PointLight(BaseLight):
     
     def illuminate(self, info):
         p = info['p']
-        C, H, W = p.shape[:3]
+        B, C, H, W = p.shape[:4]
+
         lo = self.origin
-        lo = F.broadcast_to(lo.reshape((3, 1, 1)), (C, H, W))
         lc = self.color
-        lc = F.broadcast_to(lc.reshape((3, 1, 1)), (C, H, W))
+        #print(lo.shape)
+        lo = lo.reshape((1, 3, 1, 1))
+        lc = lc.reshape((1, 3, 1, 1))
+        lo = F.broadcast_to(lo, (B, C, H, W))
+        lc = F.broadcast_to(lc, (B, C, H, W))
         di = p - lo
         #dl = F.sqrt(vdot(di, di))
         return di, lc

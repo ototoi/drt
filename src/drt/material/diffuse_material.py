@@ -15,14 +15,14 @@ class DiffuseMaterial(BaseMaterial):
 
     def set_parameters(self, info):
         mask = info['b']
-        _, H, W = mask.shape[:3]
+        B, _, H, W = mask.shape[:4]
         if 'albedo' in info:
             albedo_old = info['albedo']
-            albedo_new = F.broadcast_to(self.albedo.reshape((3, 1, 1)), (3, H, W))
+            albedo_new = F.broadcast_to(self.albedo.reshape((1, 3, 1, 1)), (B, 3, H, W))
             info['albedo'] = F.where(mask, albedo_new, albedo_old)
         else:
-            albedo_old = F.broadcast_to(self.zero_.reshape((1, 1, 1)), (3, H, W))
-            albedo_new = F.broadcast_to(self.albedo.reshape((3, 1, 1)), (3, H, W))
+            albedo_old = F.broadcast_to(self.zero_.reshape((1, 1, 1, 1)), (B, 3, H, W))
+            albedo_new = F.broadcast_to(self.albedo.reshape((1, 3, 1, 1)), (B, 3, H, W))
             info['albedo'] = F.where(mask, albedo_new, albedo_old)
         return info
 

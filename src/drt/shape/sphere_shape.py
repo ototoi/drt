@@ -11,7 +11,8 @@ from ..utils import make_parameter as MP
 
 
 def is_positive(a):
-    return F.relu(F.sign(a))
+    B, _, H, W = a.shape[:4]
+    return F.relu(F.sign(a)).reshape((B, 1, H, W))
 
 
 class SphereShape(BaseShape):

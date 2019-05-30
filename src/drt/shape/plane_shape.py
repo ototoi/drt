@@ -11,7 +11,8 @@ from ..utils import make_parameter as MP
 
 
 def is_positive(a):
-    return F.relu(F.sign(a))
+    B, _, H, W = a.shape[:4]
+    return F.relu(F.sign(a)).reshape((B, 1, H, W))
 
 
 class PlaneShape(BaseShape):
@@ -30,19 +31,19 @@ class PlaneShape(BaseShape):
         # dot(so, sn) - dot(ro, sn) - dot(rd, sn) * t = 0
         # t = ((so, sn) - (ro, sn)) / (rd, n)
         # t = (so - ro, sn) / (rd, sn)
-        C, H, W = ro.shape[:3]
+        B, C, H, W = ro.shape[:4]
         so = self.origin
-        so = F.broadcast_to(so.reshape((3, 1, 1)), (C, H, W))
+        so = F.broadcast_to(so.reshape((1, 3, 1, 1)), (B, C, H, W))
         sn = self.normal
-        sn = F.broadcast_to(sn.reshape((3, 1, 1)), (C, H, W))
+        sn = F.broadcast_to(sn.reshape((1, 3, 1, 1)), (B, C, H, W))
         a = self.albedo_
-        a = F.broadcast_to(a.reshape((3, 1, 1)), (C, H, W))
+        a = F.broadcast_to(a.reshape((1, 3, 1, 1)), (B, C, H, W))
         A = vdot(so - ro, sn)
         B = vdot(rd, sn)
         tx = A / B
-        MASK_B = is_positive(F.absolute(B)).reshape((1, H, W))
-        MASK_T0 = is_positive(tx - t0).reshape((1, H, W))
-        MASK_T1 = is_positive(t1 - tx).reshape((1, H, W))
+        MASK_B = is_positive(F.absolute(B)).reshape((B, 1, H, W))
+        MASK_T0 = is_positive(tx - t0).reshape((B, 1, H, W))
+        MASK_T1 = is_positive(t1 - tx).reshape((B, 1, H, W))
 
         b = F.cast(MASK_B * MASK_T0 * MASK_T1, 'bool')
         #print("MASK_B", MASK_B.shape)
@@ -51,7 +52,7 @@ class PlaneShape(BaseShape):
 
         p = ro + tx * rd
         #print(p.shape, p.dtype)
-        bn = F.cast(is_positive(vdot(rd, sn)).reshape((1, H, W)), 'bool')
-        n = F.where(bn, -sn, sn)
+        bn = F.cast(is_positive(vdot(rd, sn)).reshape((B, 1, H, W)), 'bool')
+        n = F.where(bn, -sn, sn).reshape((B, 3, H, W))
         #print(n.shape, n.dtype)
         return {'b':b, 't':t, 'p':p, 'n':n, 'albedo':a}

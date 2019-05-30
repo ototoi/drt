@@ -3,10 +3,13 @@ import chainer
 import chainer.functions as F
 import chainer.backend
 from chainer import Variable
+from chainer import Parameter
 
 
 def make_parameter(x):
-    if isinstance(x, Variable):
+    if isinstance(x, Parameter):
+        return x
+    elif isinstance(x, Variable):
         return x
     elif isinstance(x, (np.ndarray, np.generic) ):
         return Variable(x)
