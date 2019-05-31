@@ -95,21 +95,19 @@ def create_tallblock(materials):
 class RaytraceFunc(object):
     def __init__(self, shape, light, camera):
         renderer = DiffuseRenderer()
-
         self.camera = camera
         self.shape = shape
         self.renderer = renderer
         self.ll = [light]
 
     def __call__(self, B):
-        ro, rd = self.camera.shoot()
+        ro, rd, t0, t1 = self.camera.shoot()
+
         C, H, W = ro.shape[:3]
         ro = F.broadcast_to(ro.reshape((1, C, H, W)), (B, C, H, W))
         rd = F.broadcast_to(rd.reshape((1, C, H, W)), (B, C, H, W))
-        t0 = MP(np.broadcast_to(
-            np.array([0.01], np.float32).reshape((1, 1, 1, 1)), (B, 1, H, W)))
-        t1 = MP(np.broadcast_to(
-            np.array([10000], np.float32).reshape((1, 1, 1, 1)), (B, 1, H, W)))
+        t0 = F.broadcast_to(t0.reshape((1, 1, H, W)), (B, 1, H, W))
+        t1 = F.broadcast_to(t1.reshape((1, 1, H, W)), (B, 1, H, W))
 
         info = self.shape.intersect(ro, rd, t0, t1)
         info['ro'] = ro

@@ -20,12 +20,18 @@ class PerspectiveCamera(BaseCamera):
             self.height = height
             self.fov = fov
             self.P = MP(P)
+            self.t0 = MP([0.01])
+            self.t1 = MP([10000])
+
 
     def shoot(self):
         W = self.width
         H = self.height
         P = self.P
+        t0 = self.t0
+        t1 = self.t1
         xp = chainer.backend.get_array_module(P)
+
 
         angle = self.fov
         angle = (angle / 2) * math.pi / 180.0
@@ -46,6 +52,10 @@ class PerspectiveCamera(BaseCamera):
 
         ro = F.transpose(ro, (2, 0, 1))
         rd = F.transpose(rd, (2, 0, 1))
+
+        t0 = F.broadcast_to(t0.reshape((1, 1, 1)), (1, H, W))
+        t1 = F.broadcast_to(t1.reshape((1, 1, 1)), (1, H, W))
+ 
         #print(ro.shape, ro.dtype)
         #print(rd.shape, rd.dtype)
-        return ro, rd
+        return ro, rd, t0, t1
