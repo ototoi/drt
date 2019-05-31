@@ -224,7 +224,7 @@ def draw_goal_cornelbox(output, device=-1):
     fov = math.atan2(0.025, 0.035) * 180.0 / math.pi
     camera = PerspectiveCamera(512, 512, fov, [278.0, 273.0, -800.0])
 
-    func = RaytraceFunc(shape=shape_shortblock, light=light, camera=camera)
+    func = RaytraceFunc(shape=shape, light=light, camera=camera)
 
     if device >= 0:
         chainer.cuda.get_device_from_id(device).use()
