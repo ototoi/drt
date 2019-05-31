@@ -276,7 +276,8 @@ def calc_goal_cornelbox(output, device=-1):
     outdir = os.path.dirname(output)
     light = np.array(START_POS, dtype=np.float32)
     model = ArrayLink(light)
-    func = RaytraceFunc(device=device)
+    light = PointLight(origin=model.data, color=[1, 1, 1])
+    func = RaytraceFunc(light)
 
     if device >= 0:
         chainer.cuda.get_device_from_id(device).use()

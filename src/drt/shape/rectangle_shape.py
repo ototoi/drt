@@ -38,3 +38,7 @@ class RectangleShape(BaseShape):
         info['t'] = t
 
         return info
+
+    def to_gpu(self):
+        self.tri0.to_gpu()
+        self.tri1.to_gpu()

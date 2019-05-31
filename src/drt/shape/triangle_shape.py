@@ -18,13 +18,16 @@ def is_positive(a):
 class TriangleShape(BaseShape):
     def __init__(self, p0, p1, p2):
         super(TriangleShape, self).__init__()
-        self.points = [MP(p0), MP(p1), MP(p2)]
+        self.p0 = MP(p0)
+        self.p1 = MP(p1)
+        self.p2 = MP(p2)
+
 
     def intersect(self, ro, rd, t0, t1):
         B, _, H, W = ro.shape[:4]
-        p0 = F.broadcast_to(self.points[0].reshape((1, 3, 1, 1)), (B, 3, H, W))
-        p1 = F.broadcast_to(self.points[1].reshape((1, 3, 1, 1)), (B, 3, H, W))
-        p2 = F.broadcast_to(self.points[2].reshape((1, 3, 1, 1)), (B, 3, H, W))
+        p0 = F.broadcast_to(self.p0.reshape((1, 3, 1, 1)), (B, 3, H, W))
+        p1 = F.broadcast_to(self.p1.reshape((1, 3, 1, 1)), (B, 3, H, W))
+        p2 = F.broadcast_to(self.p2.reshape((1, 3, 1, 1)), (B, 3, H, W))
 
         so = p0
         sn = vcross(p1 - p0, p2 - p0)
