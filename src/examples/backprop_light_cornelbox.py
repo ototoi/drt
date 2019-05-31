@@ -135,8 +135,13 @@ class RaytraceFunc(object):
         img = self.renderer.render(info)
         return img
 
+    def to_gpu(self):
+        self.cam.to_gpu()
+        self.shape.to_gpu()
+
+
 def compute_loss(data1, data2):
-    return F.mean_squared_error(data1, data2)
+    return F.sum(F.absolute(data1-data2))
 
 
 def save_progress_image(odir, i, img):
@@ -200,18 +205,28 @@ class RaytraceDataset(DatasetMixin):
 
 
 START_POS = [300, 545, 300]
-GOAL_POS  = [300, 540, 300]
+GOAL_POS  = [300, 500, 300]
 
 
-def draw_goal_cornelbox(output):
+def draw_goal_cornelbox(output, device=-1):
     light = np.array(GOAL_POS, dtype=np.float32)
     model = ArrayLink(light)
     func = RaytraceFunc()
 
+    if device >= 0:
+        chainer.cuda.get_device_from_id(device).use()
+        model.to_gpu()
+        func.to_gpu()
+
     x_data = model.data.reshape((1, 3))
-    imgs = func(x_data)
-    imgs = imgs.data
-    img = imgs[0]
+    y_data = func(x_data)
+    y_data = y_data.data
+    
+    if device >= 0:
+        y_data = y_data.get()
+        cuda.get_device_from_id(device).synchronize()
+
+    img = y_data[0]
     img = np.transpose(img, (1, 2, 0))
     img = np.clip(img * 255, 0, 255).astype(np.uint8)
 
@@ -221,15 +236,25 @@ def draw_goal_cornelbox(output):
     return 0
 
 
-def draw_start_cornelbox(output):
+def draw_start_cornelbox(output, device=-1):
     light = np.array(START_POS, dtype=np.float32)
     model = ArrayLink(light)
     func = RaytraceFunc()
 
+    if device >= 0:
+        chainer.cuda.get_device_from_id(device).use()
+        model.to_gpu()
+        func.to_gpu()
+
     x_data = model.data.reshape((1, 3))
-    imgs = func(x_data)
-    imgs = imgs.data
-    img = imgs[0]
+    y_data = func(x_data)
+    y_data = y_data.data
+    
+    if device >= 0:
+        y_data = y_data.get()
+        cuda.get_device_from_id(device).synchronize()
+
+    img = y_data[0]
     img = np.transpose(img, (1, 2, 0))
     img = np.clip(img * 255, 0, 255).astype(np.uint8)
 
@@ -250,7 +275,8 @@ def calc_goal_cornelbox(output):
     chainer.config.autotune = True
     chainer.cudnn_fast_batch_normalization = True
 
-    optimizer = optimizers.Adam(alpha=1e-1, beta1=0.9, beta2=0.999, eps=1e-08)
+    #optimizer = optimizers.Adam(alpha=1e-1, beta1=0.9, beta2=0.999, eps=1e-08)
+    optimizer = optimizers.SGD(lr=0.001)
     optimizer.setup(model)
 
     #dataset
@@ -286,11 +312,12 @@ def calc_goal_cornelbox(output):
 def process(args):
     start = args.start
     goal = args.goal
+    gpu = args.gpu
     os.makedirs(os.path.dirname(start), exist_ok=True)
     os.makedirs(os.path.dirname(goal), exist_ok=True)
-    ret = draw_start_cornelbox(start)
-    ret = draw_goal_cornelbox(goal)
-    ret = calc_goal_cornelbox(goal)
+    ret = draw_start_cornelbox(start, gpu)
+    #ret = draw_goal_cornelbox(goal, gpu)
+    #ret = calc_goal_cornelbox(goal)
 
     return ret
 
@@ -298,9 +325,11 @@ def process(args):
 def main() -> int:
     parser = argparse.ArgumentParser(description='DRT')
     parser.add_argument(
-        '--goal', '-g', default='./data/backprop_light_cornelbox/goal.png', help='output file directory path')
+        '--goal', default='./data/backprop_light_cornelbox/goal.png', help='output file directory path')
     parser.add_argument(
-        '--start', '-s', default='./data/backprop_light_cornelbox/start.png', help='output file directory path')
+        '--start', default='./data/backprop_light_cornelbox/start.png', help='output file directory path')
+    parser.add_argument(
+        '--gpu', '-g', type=int, default=-1, help='GPU')
     args = parser.parse_args()
     return process(args)
 

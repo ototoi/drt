@@ -19,7 +19,6 @@ class SphereShape(BaseShape):
     def __init__(self, origin, radius):
         self.origin = MP(origin)
         self.radius = MP(radius)
-        self.albedo = MP([1, 0, 1])
 
     def intersect(self, ro, rd, t0, t1):
         """
@@ -32,10 +31,10 @@ class SphereShape(BaseShape):
         sr = self.radius
         sr2 = sr * sr
         sr2 = F.broadcast_to(sr2.reshape((1, 1, 1, 1)), (B, 1, H, W))
-        rs = ro - so                                    #(B, C, H, W)
-        B = vdot(rs, rd)                                #(B, C, H, W)
-        B = vdot(rs, rd).reshape((B, 1, H, W))          #(B, 1, H, W)
-        C = vdot(rs, rs).reshape((B, 1, H, W)) - sr2    #(B, 1, H, W)
+        rs = ro - so  # (B, C, H, W)
+        B = vdot(rs, rd)  # (B, C, H, W)
+        B = vdot(rs, rd).reshape((B, 1, H, W))  # (B, 1, H, W)
+        C = vdot(rs, rs).reshape((B, 1, H, W)) - sr2  # (B, 1, H, W)
 
         D = B * B - C
         MASK_D = is_positive(D)

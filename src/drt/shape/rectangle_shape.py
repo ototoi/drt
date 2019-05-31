@@ -23,7 +23,7 @@ class RectangleShape(object):
     def intersect(self, ro, rd, t0, t1):
         t = t1
         info = self.tri0.intersect(ro, rd, t0, t)
-        
+
         b = info['b']
         t = info['t']
         iinfo = self.tri1.intersect(ro, rd, t0, t)

@@ -5,7 +5,7 @@ import chainer.backend
 from chainer import Variable
 
 
-class BaseShape(object):
+class BaseShape(chainer.Link):
     def __init__(self):
         pass
 

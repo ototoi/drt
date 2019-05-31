@@ -19,8 +19,7 @@ class PlaneShape(BaseShape):
     def __init__(self, origin, normal):
         self.origin = MP(origin)
         self.normal = MP(normal)
-        self.albedo_ = MP([1, 0, 1])
-    
+
     def intersect(self, ro, rd, t0, t1):
         """
         dot(so - p, sn) = 0
@@ -36,8 +35,6 @@ class PlaneShape(BaseShape):
         so = F.broadcast_to(so.reshape((1, 3, 1, 1)), (B, C, H, W))
         sn = self.normal
         sn = F.broadcast_to(sn.reshape((1, 3, 1, 1)), (B, C, H, W))
-        a = self.albedo_
-        a = F.broadcast_to(a.reshape((1, 3, 1, 1)), (B, C, H, W))
         A = vdot(so - ro, sn)
         B = vdot(rd, sn)
         tx = A / B
@@ -55,4 +52,4 @@ class PlaneShape(BaseShape):
         bn = F.cast(is_positive(vdot(rd, sn)).reshape((B, 1, H, W)), 'bool')
         n = F.where(bn, -sn, sn).reshape((B, 3, H, W))
         #print(n.shape, n.dtype)
-        return {'b':b, 't':t, 'p':p, 'n':n, 'albedo':a}
+        return {'b': b, 't': t, 'p': p, 'n': n}

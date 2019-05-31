@@ -14,9 +14,12 @@ class NormalRenderer(BaseRenderer):
     def render(self, info: dict):
         b = info['b']
         n = info['n']
+
+        xp = chainer.backend.get_array_module(n)
+
         B, _, H, W = n.shape[:4]
         b = F.transpose(b, (0, 2, 3, 1))
-        mask = F.where(b, np.ones((B, H, W, 1), n.dtype), np.zeros((B, H, W, 1), n.dtype))
+        mask = F.where(b, xp.ones((B, H, W, 1), n.dtype), xp.zeros((B, H, W, 1), n.dtype))
         n = F.transpose(n, (0, 2, 3, 1))
         n = 0.5 * (n + 1)
         img = n * mask #

@@ -20,3 +20,7 @@ class MaterizedShape(BaseShape):
     def intersect(self, ro, rd, t0, t1):
         info = self.shape.intersect(ro, rd, t0, t1)
         return self.material.set_parameters(info)
+
+    def to_gpu(self):
+        self.shape.to_gpu()
+        self.material.to_gpu()

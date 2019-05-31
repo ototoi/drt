@@ -5,7 +5,7 @@ import chainer.backend
 from chainer import Variable
 
 
-class BaseMaterial(object):
+class BaseMaterial(chainer.Link):
     def __init__(self):
         pass
 

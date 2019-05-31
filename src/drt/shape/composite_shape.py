@@ -31,3 +31,8 @@ class CompositeShape(BaseShape):
         info['t'] = t
 
         return info
+
+    def to_gpu(self):
+        for s in self.shapes:
+            s.to_gpu()
+    

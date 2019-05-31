@@ -23,10 +23,10 @@ def process(args):
     t_img = np.zeros((h, 3*w, 3), dtype=np.uint8)
     t_img[:, w:2*w, :] = s_img
     t_img[:, 2*w: , :] = g_img
-    ipaths = sorted(glob.glob(os.path.join(idir, '*.png')))
+    ipaths = sorted(glob.glob(os.path.join(idir, '00*.png')))
     os.makedirs(odir, exist_ok=True)
     for i in range(len(ipaths)):
-        ipath = ipaths[i]
+        ipath = ipaths[i] 
         img = cv2.imread(ipath)
         t_img[:, 0:w, :] = img
         opath = os.path.join(odir, '{0:08d}.png'.format(i))
