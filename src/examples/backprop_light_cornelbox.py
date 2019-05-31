@@ -101,22 +101,26 @@ class RaytraceFunc(object):
         self.ll = [light]
 
     def __call__(self, B):
+        print("C----")
         ro, rd, t0, t1 = self.camera.shoot()
-
+        print("D----")
         C, H, W = ro.shape[:3]
         ro = F.broadcast_to(ro.reshape((1, C, H, W)), (B, C, H, W))
         rd = F.broadcast_to(rd.reshape((1, C, H, W)), (B, C, H, W))
         t0 = F.broadcast_to(t0.reshape((1, 1, H, W)), (B, 1, H, W))
         t1 = F.broadcast_to(t1.reshape((1, 1, H, W)), (B, 1, H, W))
 
+        print("E----")
         info = self.shape.intersect(ro, rd, t0, t1)
         info['ro'] = ro
         info['rd'] = rd
+        print("F----")
 
         #x = x[0, :].reshape((1, 3))
         
         info['ll'] = self.ll
         img = self.renderer.render(info)
+        print("G----")
         return img
 
     def to_gpu(self):
@@ -214,7 +218,7 @@ def draw_goal_cornelbox(output, device=-1):
     fov = math.atan2(0.025, 0.035) * 180.0 / math.pi
     camera = PerspectiveCamera(512, 512, fov, [278.0, 273.0, -800.0])
 
-    func = RaytraceFunc(shape=shape, light=light, camera=camera)
+    func = RaytraceFunc(shape=shape_shortblock, light=light, camera=camera)
 
     if device >= 0:
         chainer.cuda.get_device_from_id(device).use()
@@ -250,6 +254,8 @@ def draw_start_cornelbox(output, device=-1):
     shape_tallblock = create_tallblock(materials)
     shape = CompositeShape([shape_floor, shape_shortblock, shape_tallblock])
 
+    print("0-----")
+
     light = np.array(START_POS, dtype=np.float32)
     model = ArrayLink(light)
     light = PointLight(origin=model.data, color=[1, 1, 1])
@@ -267,6 +273,7 @@ def draw_start_cornelbox(output, device=-1):
 
     print("1-----")
     y_data = func(1)
+    print("11----")
     y_data = y_data.data
     print("2-----")
     
@@ -343,8 +350,8 @@ def process(args):
     gpu = args.gpu
     os.makedirs(os.path.dirname(start), exist_ok=True)
     os.makedirs(os.path.dirname(goal), exist_ok=True)
-    #ret = draw_start_cornelbox(start, gpu)
-    ret = draw_goal_cornelbox(goal, gpu)
+    ret = draw_start_cornelbox(start, gpu)
+    #ret = draw_goal_cornelbox(goal, gpu)
     #ret = calc_goal_cornelbox(goal)
 
     return ret
