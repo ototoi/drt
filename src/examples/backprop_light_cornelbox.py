@@ -93,7 +93,7 @@ def create_tallblock(materials):
     return cmps
 
 class RaytraceFunc(object):
-    def __init__(self):
+    def __init__(self, device=-1):
         materials = {}
         materials["light"] = DiffuseMaterial([1.0, 1.0, 1.0])
         materials["white"] = DiffuseMaterial([0.5, 0.5, 0.5])
@@ -113,6 +113,7 @@ class RaytraceFunc(object):
         self.cam = cam
         self.shape = shape
         self.renderer = renderer
+        self.device = device
 
     def __call__(self, x):
         B = x.shape[0]
@@ -131,6 +132,9 @@ class RaytraceFunc(object):
 
         #x = x[0, :].reshape((1, 3))
         l = PointLight(origin=x, color=[0.1, 0.1, 0.1])
+        if self.device >= 0:
+            l.to_gpu()
+        
         info['ll'] = [l]
         img = self.renderer.render(info)
         return img
@@ -211,7 +215,7 @@ GOAL_POS  = [300, 500, 300]
 def draw_goal_cornelbox(output, device=-1):
     light = np.array(GOAL_POS, dtype=np.float32)
     model = ArrayLink(light)
-    func = RaytraceFunc()
+    func = RaytraceFunc(device=device)
 
     if device >= 0:
         chainer.cuda.get_device_from_id(device).use()
@@ -239,7 +243,7 @@ def draw_goal_cornelbox(output, device=-1):
 def draw_start_cornelbox(output, device=-1):
     light = np.array(START_POS, dtype=np.float32)
     model = ArrayLink(light)
-    func = RaytraceFunc()
+    func = RaytraceFunc(device=device)
 
     if device >= 0:
         chainer.cuda.get_device_from_id(device).use()
@@ -264,13 +268,18 @@ def draw_start_cornelbox(output, device=-1):
     return 0
 
 
-def calc_goal_cornelbox(output):
+def calc_goal_cornelbox(output, device=-1):
     epoch = 50
 
     outdir = os.path.dirname(output)
     light = np.array(START_POS, dtype=np.float32)
     model = ArrayLink(light)
-    func = RaytraceFunc()
+    func = RaytraceFunc(device=device)
+
+    if device >= 0:
+        chainer.cuda.get_device_from_id(device).use()
+        model.to_gpu()
+        func.to_gpu()
 
     chainer.config.autotune = True
     chainer.cudnn_fast_batch_normalization = True

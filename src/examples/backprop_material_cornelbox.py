@@ -106,12 +106,14 @@ class RaytraceFunc(object):
 
         fov = math.atan2(0.025, 0.035) * 180.0 / math.pi
         cam = PerspectiveCamera(512, 512, fov, [278.0, 273.0, -800.0])
+        l = PointLight(origin=START_POS, color=[0.1, 0.1, 0.1])
 
         renderer = DiffuseRenderer()
 
         self.cam = cam
         self.shape = shape
         self.renderer = renderer
+        self.ll = [l]
 
     def __call__(self, B):
         ro, rd = self.cam.shoot()
@@ -132,8 +134,8 @@ class RaytraceFunc(object):
         info['rd'] = rd
 
         #x = x[0, :].reshape((1, 3))
-        l = PointLight(origin=START_POS, color=[0.1, 0.1, 0.1])
-        info['ll'] = [l]
+        
+        info['ll'] = self.ll
         img = self.renderer.render(info)
         return img
 
