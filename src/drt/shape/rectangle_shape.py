@@ -11,7 +11,7 @@ from ..utils import make_parameter as MP
 from .triangle_shape import TriangleShape
 
 
-class RectangleShape(object):
+class RectangleShape(BaseShape):
     def __init__(self, p0, p1, p2, p3):
         super(RectangleShape, self).__init__()
         self.p0 = MP(p0)
