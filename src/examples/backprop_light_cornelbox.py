@@ -93,7 +93,7 @@ def create_tallblock(materials):
     return cmps
 
 class RaytraceFunc(object):
-    def __init__(self, device=-1):
+    def __init__(self, l):
         materials = {}
         materials["light"] = DiffuseMaterial([1.0, 1.0, 1.0])
         materials["white"] = DiffuseMaterial([0.5, 0.5, 0.5])
@@ -113,10 +113,9 @@ class RaytraceFunc(object):
         self.cam = cam
         self.shape = shape
         self.renderer = renderer
-        self.device = device
+        self.ll = [l]
 
-    def __call__(self, x):
-        B = x.shape[0]
+    def __call__(self, B):
         ro, rd = self.cam.shoot()
         C, H, W = ro.shape[:3]
         ro = F.broadcast_to(ro.reshape((1, C, H, W)), (B, C, H, W))
@@ -131,17 +130,17 @@ class RaytraceFunc(object):
         info['rd'] = rd
 
         #x = x[0, :].reshape((1, 3))
-        l = PointLight(origin=x, color=[0.1, 0.1, 0.1])
-        if self.device >= 0:
-            l.to_gpu()
         
-        info['ll'] = [l]
+        info['ll'] = self.ll
         img = self.renderer.render(info)
         return img
 
     def to_gpu(self):
         self.cam.to_gpu()
         self.shape.to_gpu()
+        for l in self.ll:
+            l.to_gpu()
+
 
 
 def compute_loss(data1, data2):
@@ -167,8 +166,8 @@ class RaytraceUpdater(StandardUpdater):
 
         batch = train_iter.next()
         t_data = self.converter(batch, self.device)
-        x_data = self.model.data.reshape((1, 3))
-        y_data = self.func(x_data)
+        B = t_data.shape[0]
+        y_data = self.func(B)
         B, C, H, W = t_data.shape[:4]
         y_data = F.broadcast_to(y_data, (B, C, H, W))
         loss = compute_loss(y_data, t_data)
@@ -214,16 +213,19 @@ GOAL_POS  = [300, 500, 300]
 
 def draw_goal_cornelbox(output, device=-1):
     light = np.array(GOAL_POS, dtype=np.float32)
+    
+    light = np.array(GOAL_POS, dtype=np.float32)
     model = ArrayLink(light)
-    func = RaytraceFunc(device=device)
+    light = PointLight(origin=model.data, color=[1, 1, 1])
+
+    func = RaytraceFunc(light)
 
     if device >= 0:
         chainer.cuda.get_device_from_id(device).use()
         model.to_gpu()
         func.to_gpu()
 
-    x_data = model.data.reshape((1, 3))
-    y_data = func(x_data)
+    y_data = func(1)
     y_data = y_data.data
     
     if device >= 0:
@@ -243,15 +245,15 @@ def draw_goal_cornelbox(output, device=-1):
 def draw_start_cornelbox(output, device=-1):
     light = np.array(START_POS, dtype=np.float32)
     model = ArrayLink(light)
-    func = RaytraceFunc(device=device)
+    light = PointLight(origin=model.data, color=[1, 1, 1])
+    func = RaytraceFunc(light)
 
     if device >= 0:
         chainer.cuda.get_device_from_id(device).use()
         model.to_gpu()
         func.to_gpu()
 
-    x_data = model.data.reshape((1, 3))
-    y_data = func(x_data)
+    y_data = func(1)
     y_data = y_data.data
     
     if device >= 0:
