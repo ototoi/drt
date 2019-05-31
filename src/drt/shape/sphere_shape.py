@@ -18,8 +18,9 @@ def is_positive(a):
 class SphereShape(BaseShape):
     def __init__(self, origin, radius):
         super(SphereShape, self).__init__()
-        self.origin = MP(origin)
-        self.radius = MP(radius)
+        with self.init_scope():
+            self.origin = MP(origin)
+            self.radius = MP(radius)
 
     def intersect(self, ro, rd, t0, t1):
         """

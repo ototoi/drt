@@ -15,8 +15,9 @@ from ..vec import vdot, vnorm
 class MaterizedShape(BaseShape):
     def __init__(self, shape, material):
         super(MaterizedShape, self).__init__()
-        self.shape = shape
-        self.material = material
+        with self.init_scope():
+            self.shape = shape
+            self.material = material
 
     def intersect(self, ro, rd, t0, t1):
         info = self.shape.intersect(ro, rd, t0, t1)

@@ -18,9 +18,10 @@ def is_positive(a):
 class TriangleShape(BaseShape):
     def __init__(self, p0, p1, p2):
         super(TriangleShape, self).__init__()
-        self.p0 = MP(p0)
-        self.p1 = MP(p1)
-        self.p2 = MP(p2)
+        with self.init_scope():
+            self.p0 = MP(p0)
+            self.p1 = MP(p1)
+            self.p2 = MP(p2)
 
 
     def intersect(self, ro, rd, t0, t1):
