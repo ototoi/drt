@@ -15,10 +15,11 @@ from .base_camera import BaseCamera
 class PerspectiveCamera(BaseCamera):
     def __init__(self, width, height, fov, P):
         super(PerspectiveCamera, self).__init__()
-        self.width = width
-        self.height = height
-        self.fov = fov
-        self.P = MP(P)
+        with self.init_scope():
+            self.width = width
+            self.height = height
+            self.fov = fov
+            self.P = MP(P)
 
     def shoot(self):
         W = self.width
