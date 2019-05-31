@@ -54,14 +54,14 @@ class PerspectiveCamera(BaseCamera):
         ro = F.tile(ro, (H, W, 1))
         rd = xp.ones((H, W, 3), dtype=np.float32)
         
-        yy = xp.tile( xp.arange(H, dtype=np.float32).reshape((H, 1, 1)), (1, W, 1))
-        xx = xp.tile( xp.arange(W, dtype=np.float32).reshape((1, W, 1)), (H, 1, 1))
+        yy = xp.tile(xp.arange(H, dtype=np.float32).reshape((H, 1, 1)), (1, W, 1))
+        xx = xp.tile(xp.arange(W, dtype=np.float32).reshape((1, W, 1)), (H, 1, 1))
         yy = (1 - 2 * (yy + 0.5) / H) * HH
         xx = (2 * (xx + 0.5) / W - 1) * HH 
         #print(rd.shape, xx.shape, yy.shape)
         rd[:, :, 0] = xx[:, :, 0]
         rd[:, :, 1] = yy[:, :, 0]
-
+        
         ro = F.transpose(ro, (2, 0, 1))
         rd = F.transpose(rd, (2, 0, 1))
         rd = rd.reshape((1, 3, H, W))

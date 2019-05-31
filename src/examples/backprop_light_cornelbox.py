@@ -101,26 +101,26 @@ class RaytraceFunc(object):
         self.ll = [light]
 
     def __call__(self, B):
-        print("C----")
+        #print("C----")
         ro, rd, t0, t1 = self.camera.shoot()
-        print("D----")
+        #print("D----")
         C, H, W = ro.shape[:3]
         ro = F.broadcast_to(ro.reshape((1, C, H, W)), (B, C, H, W))
         rd = F.broadcast_to(rd.reshape((1, C, H, W)), (B, C, H, W))
         t0 = F.broadcast_to(t0.reshape((1, 1, H, W)), (B, 1, H, W))
         t1 = F.broadcast_to(t1.reshape((1, 1, H, W)), (B, 1, H, W))
 
-        print("E----")
+        #print("E----")
         info = self.shape.intersect(ro, rd, t0, t1)
         info['ro'] = ro
         info['rd'] = rd
-        print("F----")
+        #print("F----")
 
         #x = x[0, :].reshape((1, 3))
         
         info['ll'] = self.ll
         img = self.renderer.render(info)
-        print("G----")
+        #print("G----")
         return img
 
     def to_gpu(self):
@@ -166,6 +166,10 @@ class RaytraceUpdater(StandardUpdater):
             'pos/light_y': self.model.data[1],
             'pos/light_z': self.model.data[2]
         })
+
+        if self.device >= 0:
+            y_data = y_data.get()
+            cuda.get_device_from_id(self.device).synchronize()
 
         img = y_data.data[0]
         img = np.transpose(img, (1, 2, 0))
@@ -254,8 +258,6 @@ def draw_start_cornelbox(output, device=-1):
     shape_tallblock = create_tallblock(materials)
     shape = CompositeShape([shape_floor, shape_shortblock, shape_tallblock])
 
-    print("0-----")
-
     light = np.array(START_POS, dtype=np.float32)
     model = ArrayLink(light)
     light = PointLight(origin=model.data, color=[1, 1, 1])
@@ -265,22 +267,17 @@ def draw_start_cornelbox(output, device=-1):
 
     func = RaytraceFunc(shape=shape, light=light, camera=camera)
 
-    print("0-----")
     if device >= 0:
         chainer.cuda.get_device_from_id(device).use()
         model.to_gpu()
         func.to_gpu()
 
-    print("1-----")
     y_data = func(1)
-    print("11----")
     y_data = y_data.data
-    print("2-----")
     
     if device >= 0:
         y_data = y_data.get()
         cuda.get_device_from_id(device).synchronize()
-    print("3-----")
 
     img = y_data[0]
     img = np.transpose(img, (1, 2, 0))
@@ -289,7 +286,6 @@ def draw_start_cornelbox(output, device=-1):
     img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
 
     cv2.imwrite(output, img)
-    print("4-----")
     return 0
 
 
@@ -297,10 +293,26 @@ def calc_goal_cornelbox(output, device=-1):
     epoch = 50
 
     outdir = os.path.dirname(output)
+
+    materials = {}
+    materials["light"] = DiffuseMaterial([1.0, 1.0, 1.0])
+    materials["white"] = DiffuseMaterial([0.5, 0.5, 0.5])
+    materials["green"] = DiffuseMaterial([0.0, 1.0, 0.0])
+    materials["red"] = DiffuseMaterial([1.0, 0.0, 0.0])
+    #shape_light = create_light(materials)
+    shape_floor = create_floor(materials)
+    shape_shortblock = create_shortblock(materials)
+    shape_tallblock = create_tallblock(materials)
+    shape = CompositeShape([shape_floor, shape_shortblock, shape_tallblock])
+
     light = np.array(START_POS, dtype=np.float32)
     model = ArrayLink(light)
     light = PointLight(origin=model.data, color=[1, 1, 1])
-    func = RaytraceFunc(light)
+
+    fov = math.atan2(0.025, 0.035) * 180.0 / math.pi
+    camera = PerspectiveCamera(512, 512, fov, [278.0, 273.0, -800.0])
+
+    func = RaytraceFunc(shape=shape, light=light, camera=camera)
 
     if device >= 0:
         chainer.cuda.get_device_from_id(device).use()
@@ -319,7 +331,7 @@ def calc_goal_cornelbox(output, device=-1):
     train_iter = chainer.iterators.SerialIterator(train_dataset, 1, shuffle=True)
 
     #updator
-    updater = RaytraceUpdater(train_iter, model, func, optimizer, outdir)
+    updater = RaytraceUpdater(train_iter, model, func, optimizer, outdir, device=device)
 
     #trainer
     trainer = training.Trainer(updater, (epoch, 'epoch'), outdir)
@@ -351,8 +363,8 @@ def process(args):
     os.makedirs(os.path.dirname(start), exist_ok=True)
     os.makedirs(os.path.dirname(goal), exist_ok=True)
     ret = draw_start_cornelbox(start, gpu)
-    #ret = draw_goal_cornelbox(goal, gpu)
-    #ret = calc_goal_cornelbox(goal)
+    ret = draw_goal_cornelbox(goal, gpu)
+    ret = calc_goal_cornelbox(goal, gpu)
 
     return ret
 
