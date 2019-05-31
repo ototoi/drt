@@ -167,11 +167,13 @@ class RaytraceUpdater(StandardUpdater):
             'pos/light_z': self.model.data[2]
         })
 
+
+        y_data = y_data.data
         if self.device >= 0:
             y_data = y_data.get()
             cuda.get_device_from_id(self.device).synchronize()
 
-        img = y_data.data[0]
+        img = y_data[0]
         img = np.transpose(img, (1, 2, 0))
         img = np.clip(img, 0, 1)
         img = (img * 255).astype(np.uint8)
