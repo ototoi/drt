@@ -258,17 +258,22 @@ def draw_start_cornelbox(output, device=-1):
     camera = PerspectiveCamera(512, 512, fov, [278.0, 273.0, -800.0])
 
     func = RaytraceFunc(shape=shape, light=light, camera=camera)
+
+    print("0-----")
     if device >= 0:
         chainer.cuda.get_device_from_id(device).use()
         model.to_gpu()
         func.to_gpu()
 
+    print("1-----")
     y_data = func(1)
     y_data = y_data.data
+    print("2-----")
     
     if device >= 0:
         y_data = y_data.get()
         cuda.get_device_from_id(device).synchronize()
+    print("3-----")
 
     img = y_data[0]
     img = np.transpose(img, (1, 2, 0))
@@ -277,6 +282,7 @@ def draw_start_cornelbox(output, device=-1):
     img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
 
     cv2.imwrite(output, img)
+    print("4-----")
     return 0
 
 
