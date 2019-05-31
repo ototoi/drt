@@ -18,10 +18,6 @@ class PointLight(BaseLight):
         p = info['p']
         B, C, H, W = p.shape[:4]
 
-        xp = chainer.backend.get_array_module(p)
-        ll = xp.zeros((1,), np.float32)
-        print(type(ll))
-
         lo = self.origin
         lc = self.color
         #print(lo.shape)
