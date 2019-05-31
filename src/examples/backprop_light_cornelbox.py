@@ -224,6 +224,7 @@ def draw_goal_cornelbox(output, device=-1):
         func.to_gpu()
         shape_shortblock.shape.shapes[0].tri0.to_gpu()
 
+    print(type(camera.P.data))
     print(type(model.data.data))
     print(type(shape_shortblock.shape.shapes[0].tri0.p0.data))
 
