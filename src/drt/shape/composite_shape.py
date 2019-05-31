@@ -10,6 +10,7 @@ from ..vec import vdot, vnorm
 
 class CompositeShape(BaseShape):
     def __init__(self, shapes):
+        super(CompositeShape, self).__init__()
         self.shapes = shapes
 
     def intersect(self, ro, rd, t0, t1):

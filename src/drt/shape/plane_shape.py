@@ -17,6 +17,7 @@ def is_positive(a):
 
 class PlaneShape(BaseShape):
     def __init__(self, origin, normal):
+        super(PlaneShape, self).__init__()
         self.origin = MP(origin)
         self.normal = MP(normal)
 

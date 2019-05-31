@@ -8,6 +8,7 @@ from ..utils import make_parameter as  MP
 
 class PointLight(BaseLight):
     def __init__(self, origin, color):
+        super(PointLight, self).__init__()
         self.origin = MP(origin)
         self.color = MP(color)
 

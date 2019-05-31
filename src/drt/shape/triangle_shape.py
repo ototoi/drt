@@ -17,6 +17,7 @@ def is_positive(a):
 
 class TriangleShape(BaseShape):
     def __init__(self, p0, p1, p2):
+        super(TriangleShape, self).__init__()
         self.points = [MP(p0), MP(p1), MP(p2)]
 
     def intersect(self, ro, rd, t0, t1):
@@ -30,8 +31,9 @@ class TriangleShape(BaseShape):
 
         # print(p0.shape)
         # print(sn.shape)
+        aa = so - ro
 
-        A = vdot(so - ro, sn)
+        A = vdot(aa, sn)
         B = vdot(rd, sn)
         #print(A.shape, B.shape)
         tx = A / B

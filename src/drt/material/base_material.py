@@ -7,7 +7,7 @@ from chainer import Variable
 
 class BaseMaterial(chainer.Link):
     def __init__(self):
-        pass
+        super(BaseMaterial, self).__init__()
 
     def set_parameters(self, info):
         pass

@@ -7,7 +7,7 @@ from chainer import Variable
 
 class BaseShape(chainer.Link):
     def __init__(self):
-        pass
+        super(BaseShape, self).__init__()
 
     def intersect(self, ro, rd, t0, t1):
         pass

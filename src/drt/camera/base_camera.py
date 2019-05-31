@@ -6,7 +6,7 @@ from chainer import Variable
 
 class BaseCamera(chainer.Link):
     def __init__(self):
-        pass
+        super(BaseCamera, self).__init__()
     
     def shoot(self):
         pass 

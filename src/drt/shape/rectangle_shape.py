@@ -13,6 +13,7 @@ from .triangle_shape import TriangleShape
 
 class RectangleShape(object):
     def __init__(self, p0, p1, p2, p3):
+        super(RectangleShape, self).__init__()
         self.p0 = MP(p0)
         self.p1 = MP(p1)
         self.p2 = MP(p2)

@@ -14,6 +14,7 @@ from ..vec import vdot, vnorm
 
 class MaterizedShape(BaseShape):
     def __init__(self, shape, material):
+        super(MaterizedShape, self).__init__()
         self.shape = shape
         self.material = material
 

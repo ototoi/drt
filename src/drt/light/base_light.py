@@ -4,7 +4,7 @@ import chainer.functions as F
 
 class BaseLight(chainer.Link):
     def __init__(self):
-        pass
+        super(BaseLight, self).__init__()
 
     def illuminate(self, info):
         pass

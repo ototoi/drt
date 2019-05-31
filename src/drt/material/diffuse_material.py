@@ -10,6 +10,7 @@ from ..utils import make_parameter as  MP
 
 class DiffuseMaterial(BaseMaterial):
     def __init__(self, albedo=[1,1,1]):
+        super(DiffuseMaterial, self).__init__()
         self.albedo = MP(albedo)
 
     def set_parameters(self, info):
