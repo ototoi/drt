@@ -225,6 +225,8 @@ def draw_goal_cornelbox(output, device=-1):
         model.to_gpu()
         func.to_gpu()
 
+    print(type(model.data.data))
+
     y_data = func(1)
     y_data = y_data.data
     

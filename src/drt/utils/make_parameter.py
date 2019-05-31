@@ -12,10 +12,10 @@ def make_parameter(x):
     elif isinstance(x, Variable):
         return x
     elif isinstance(x, (np.ndarray, np.generic) ):
-        return Variable(x)
+        return Parameter(x)
     elif isinstance(x, list):
         x = np.array(x, dtype=np.float32)
-        return Variable(x)
+        return Parameter(x)
     else:
-        return Variable(x)
+        return Parameter(x)
 
