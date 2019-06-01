@@ -295,7 +295,7 @@ def calc_goal_cornelbox(output, device=-1):
     chainer.config.autotune = True
     chainer.cudnn_fast_batch_normalization = True
 
-    optimizer = optimizers.MomentumSGD(lr=1e-5)
+    optimizer = optimizers.MomentumSGD(lr=1e-5, momentum=0.5)
     optimizer.setup(model)
 
     #dataset
