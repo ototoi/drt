@@ -132,7 +132,8 @@ class RaytraceFunc(object):
 
 
 def compute_loss(data1, data2):
-    return F.sum(F.absolute(data1-data2))
+    _, _, H, W = data1.shape[:4]
+    return F.sum(F.absolute(data1-data2)) * (H * W) / (1024 * 1024)
 
 
 def save_progress_image(odir, i, img):
@@ -166,8 +167,7 @@ class RaytraceUpdater(StandardUpdater):
             'pos/light_y': self.model.data[1],
             'pos/light_z': self.model.data[2]
         })
-
-
+        
         y_data = y_data.data
         if self.device >= 0:
             y_data = y_data.get()
@@ -217,12 +217,20 @@ def draw_goal_cornelbox(output, device=-1):
     shape_tallblock = create_tallblock(materials)
     shape = CompositeShape([shape_floor, shape_shortblock, shape_tallblock])
 
+    """
     light = np.array(GOAL_POS, dtype=np.float32)
     model = ArrayLink(light)
     light = PointLight(origin=model.data, color=[1, 1, 1])
+    """
+    
+    light = PointLight(origin=GOAL_POS, color=[1, 1, 1])
+    model = chainer.Link()
+    with model.init_scope():
+        setattr(model, 'data', light.origin)
 
     fov = math.atan2(0.025, 0.035) * 180.0 / math.pi
     camera = PerspectiveCamera(512, 512, fov, [278.0, 273.0, -800.0])
+
 
     func = RaytraceFunc(shape=shape, light=light, camera=camera)
 
@@ -260,9 +268,10 @@ def draw_start_cornelbox(output, device=-1):
     shape_tallblock = create_tallblock(materials)
     shape = CompositeShape([shape_floor, shape_shortblock, shape_tallblock])
 
-    light = np.array(START_POS, dtype=np.float32)
-    model = ArrayLink(light)
-    light = PointLight(origin=model.data, color=[1, 1, 1])
+    light = PointLight(origin=START_POS, color=[1, 1, 1])
+    model = chainer.Link()
+    with model.init_scope():
+        setattr(model, 'data', light.origin)
 
     fov = math.atan2(0.025, 0.035) * 180.0 / math.pi
     camera = PerspectiveCamera(512, 512, fov, [278.0, 273.0, -800.0])
@@ -307,9 +316,11 @@ def calc_goal_cornelbox(output, device=-1):
     shape_tallblock = create_tallblock(materials)
     shape = CompositeShape([shape_floor, shape_shortblock, shape_tallblock])
 
-    light = np.array(START_POS, dtype=np.float32)
-    model = ArrayLink(light)
-    light = PointLight(origin=model.data, color=[1, 1, 1])
+    light = PointLight(origin=START_POS, color=[1, 1, 1])
+    model = chainer.Link()
+    #model.add_param('data', (3, ), dtype=np.float32)   #Cannot use this for adding a paramter already existed  
+    with model.init_scope():
+        setattr(model, 'data', light.origin)
 
     fov = math.atan2(0.025, 0.035) * 180.0 / math.pi
     camera = PerspectiveCamera(512, 512, fov, [278.0, 273.0, -800.0])

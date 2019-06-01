@@ -105,29 +105,23 @@ class RaytraceFunc(object):
         shape = CompositeShape([shape_floor, shape_shortblock, shape_tallblock])
 
         fov = math.atan2(0.025, 0.035) * 180.0 / math.pi
-        cam = PerspectiveCamera(512, 512, fov, [278.0, 273.0, -800.0])
+        camera = PerspectiveCamera(512, 512, fov, [278.0, 273.0, -800.0])
         l = PointLight(origin=START_POS, color=[0.1, 0.1, 0.1])
 
         renderer = DiffuseRenderer()
 
-        self.cam = cam
+        self.camera = camera
         self.shape = shape
         self.renderer = renderer
         self.ll = [l]
 
     def __call__(self, B):
-        ro, rd = self.cam.shoot()
+        ro, rd, t0, t1 = self.camera.shoot()
         C, H, W = ro.shape[:3]
-        ro = ro.reshape((1, C, H, W))
-        rd = rd.reshape((1, C, H, W))
-        if B != 1:
-            ro = F.broadcast_to(ro, (B, C, H, W))
-            rd = F.broadcast_to(rd, (B, C, H, W))
-
-        t0 = MP(np.broadcast_to(
-            np.array([0.01], np.float32).reshape((1, 1, 1, 1)), (B, 1, H, W)))
-        t1 = MP(np.broadcast_to(
-            np.array([10000], np.float32).reshape((1, 1, 1, 1)), (B, 1, H, W)))
+        ro = F.broadcast_to(ro.reshape((1, C, H, W)), (B, C, H, W))
+        rd = F.broadcast_to(rd.reshape((1, C, H, W)), (B, C, H, W))
+        t0 = F.broadcast_to(t0.reshape((1, 1, H, W)), (B, 1, H, W))
+        t1 = F.broadcast_to(t1.reshape((1, 1, H, W)), (B, 1, H, W))
 
         info = self.shape.intersect(ro, rd, t0, t1)
         info['ro'] = ro
@@ -139,8 +133,17 @@ class RaytraceFunc(object):
         img = self.renderer.render(info)
         return img
 
+    def to_gpu(self):
+        self.camera.to_gpu()
+        self.shape.to_gpu()
+        for l in self.ll:
+            l.to_gpu()
+
+
 def compute_loss(data1, data2):
-    return F.mean_squared_error(data1, data2)
+    _, _, H, W = data1.shape[:4]
+    return F.sum(F.absolute(data1-data2)) * (H * W) / (1024 * 1024)
+
 
 def save_progress_image(odir, i, img):
     path = os.path.join(odir, '{0:08d}.png'.format(i))
@@ -160,12 +163,9 @@ class RaytraceUpdater(StandardUpdater):
 
         batch = train_iter.next()
         t_data = self.converter(batch, self.device)
-        #x_data = self.model.data.reshape((1, 3))
-        
-        B, C, H, W = t_data.shape[:4]
-
+        B = t_data.shape[0]
         y_data = self.func(B)
-
+        B, C, H, W = t_data.shape[:4]
         y_data = F.broadcast_to(y_data, (B, C, H, W))
         loss = compute_loss(y_data, t_data)
 
@@ -176,7 +176,12 @@ class RaytraceUpdater(StandardUpdater):
             'left/b': self.model.data[2]
         })
 
-        img = y_data.data[0]
+        y_data = y_data.data
+        if self.device >= 0:
+            y_data = y_data.get()
+            cuda.get_device_from_id(self.device).synchronize()
+
+        img = y_data[0]
         img = np.transpose(img, (1, 2, 0))
         img = np.clip(img, 0, 1)
         img = (img * 255).astype(np.uint8)
@@ -205,22 +210,27 @@ class RaytraceDataset(DatasetMixin):
 
 
 
-def draw_goal_cornelbox(output):
+def draw_goal_cornelbox(output, device=-1):
     materials = {}
     materials["light"] = DiffuseMaterial([1.0, 1.0, 1.0])
     materials["white"] = DiffuseMaterial([0.5, 0.5, 0.5])
     materials["green"] = DiffuseMaterial([0.0, 1.0, 0.0])
     materials["red"] = DiffuseMaterial([0.0, 1.0, 0.0])
 
-
-    light = np.array(GOAL_POS, dtype=np.float32)
-    model = ArrayLink(light)
     func = RaytraceFunc(materials)
 
-    #x_data = model.data.reshape((1, 3))
-    imgs = func(1)
-    imgs = imgs.data
-    img = imgs[0]
+    if device >= 0:
+        chainer.cuda.get_device_from_id(device).use()
+        func.to_gpu()
+
+    y_data = func(1)
+    y_data = y_data.data
+    
+    if device >= 0:
+        y_data = y_data.get()
+        cuda.get_device_from_id(device).synchronize()
+
+    img = y_data[0]
     img = np.transpose(img, (1, 2, 0))
     img = np.clip(img * 255, 0, 255).astype(np.uint8)
 
@@ -230,22 +240,27 @@ def draw_goal_cornelbox(output):
     return 0
 
 
-def draw_start_cornelbox(output):
+def draw_start_cornelbox(output, device=-1):
     materials = {}
     materials["light"] = DiffuseMaterial([1.0, 1.0, 1.0])
     materials["white"] = DiffuseMaterial([0.5, 0.5, 0.5])
     materials["green"] = DiffuseMaterial([0.0, 1.0, 0.0])
     materials["red"] = DiffuseMaterial([1.0, 0.01, 0.01])
 
-
-    light = np.array(START_POS, dtype=np.float32)
-    #model = ArrayLink(light)
     func = RaytraceFunc(materials)
 
-    #x_data = model.data.reshape((1, 3))
-    imgs = func(1)
-    imgs = imgs.data
-    img = imgs[0]
+    if device >= 0:
+        chainer.cuda.get_device_from_id(device).use()
+        func.to_gpu()
+
+    y_data = func(1)
+    y_data = y_data.data
+    
+    if device >= 0:
+        y_data = y_data.get()
+        cuda.get_device_from_id(device).synchronize()
+
+    img = y_data[0]
     img = np.transpose(img, (1, 2, 0))
     img = np.clip(img * 255, 0, 255).astype(np.uint8)
 
@@ -255,30 +270,32 @@ def draw_start_cornelbox(output):
     return 0
 
 
-def calc_goal_cornelbox(output):
-
-    model = ArrayLink(np.array([1.0, 0.01, 0.01], dtype=np.float32))
-    
-
+def calc_goal_cornelbox(output, device=-1):
     materials = {}
     materials["light"] = DiffuseMaterial([1.0, 1.0, 1.0])
     materials["white"] = DiffuseMaterial([0.5, 0.5, 0.5])
     materials["green"] = DiffuseMaterial([0.0, 1.0, 0.0])
-    materials["red"] = DiffuseMaterial(model.data)
+    materials["red"] = DiffuseMaterial([1.0, 0.01, 0.01])
+
+    model = chainer.Link()
+    with model.init_scope():
+        setattr(model, 'data', materials["red"].albedo)
 
     epoch = 100
-
     outdir = os.path.dirname(output)
     
 
     func = RaytraceFunc(materials)
 
-    
+    if device >= 0:
+        chainer.cuda.get_device_from_id(device).use()
+        model.to_gpu()
+        func.to_gpu()
 
     chainer.config.autotune = True
     chainer.cudnn_fast_batch_normalization = True
 
-    optimizer = optimizers.Adam(alpha=1e-1, beta1=0.9, beta2=0.999, eps=1e-08)
+    optimizer = optimizers.MomentumSGD(lr=1e-5)
     optimizer.setup(model)
 
     #dataset
@@ -286,7 +303,7 @@ def calc_goal_cornelbox(output):
     train_iter = chainer.iterators.SerialIterator(train_dataset, 1, shuffle=True)
 
     #updator
-    updater = RaytraceUpdater(train_iter, model, func, optimizer, outdir)
+    updater = RaytraceUpdater(train_iter, model, func, optimizer, outdir, device=device)
 
     #trainer
     trainer = training.Trainer(updater, (epoch, 'epoch'), outdir)
@@ -314,11 +331,12 @@ def calc_goal_cornelbox(output):
 def process(args):
     start = args.start
     goal = args.goal
+    gpu = args.gpu
     os.makedirs(os.path.dirname(start), exist_ok=True)
     os.makedirs(os.path.dirname(goal), exist_ok=True)
-    ret = draw_start_cornelbox(start)
-    ret = draw_goal_cornelbox(goal)
-    ret = calc_goal_cornelbox(goal)
+    ret = draw_start_cornelbox(start, gpu)
+    ret = draw_goal_cornelbox(goal, gpu)
+    ret = calc_goal_cornelbox(goal, gpu)
 
     return ret
 
@@ -326,9 +344,11 @@ def process(args):
 def main() -> int:
     parser = argparse.ArgumentParser(description='DRT')
     parser.add_argument(
-        '--goal', '-g', default='./data/backprop_material_cornelbox/goal.png', help='output file directory path')
+        '--goal', default='./data/backprop_light_cornelbox/goal.png', help='output file directory path')
     parser.add_argument(
-        '--start', '-s', default='./data/backprop_material_cornelbox/start.png', help='output file directory path')
+        '--start', default='./data/backprop_light_cornelbox/start.png', help='output file directory path')
+    parser.add_argument(
+        '--gpu', '-g', type=int, default=-1, help='GPU')
     args = parser.parse_args()
     return process(args)
 

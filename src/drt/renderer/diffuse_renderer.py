@@ -32,6 +32,7 @@ class DiffuseRenderer(BaseRenderer):
         
         for l in ll:
             di, lc = l.illuminate(info)
+
             di = vnorm(di)
             di = F.transpose(di, (0, 2, 3, 1))
             lc = F.transpose(lc, (0, 2, 3, 1))
