@@ -7,7 +7,7 @@ import chainer.functions as F
 import chainer.backend
 from chainer import Variable
 from ..utils import make_parameter as MP
-from ..vec import vdot, vnorm
+from ..vec import vdot, vnorm, vcross
 
 
 from .base_camera import BaseCamera
@@ -28,13 +28,15 @@ for y in range(H):
 
 
 class PerspectiveCamera(BaseCamera):
-    def __init__(self, width, height, fov, P):
+    def __init__(self, width, height, fov, origin, direction = [0, 0, 1], up = [0, 1, 0]):
         super(PerspectiveCamera, self).__init__()
         with self.init_scope():
             self.width = width
             self.height = height
             self.fov = fov
-            self.P = MP(P)
+            self.origin = MP(origin)
+            self.direction = MP(direction)
+            self.up = MP(up)
             self.t0 = MP([0.01])
             self.t1 = MP([10000])
 
@@ -42,27 +44,35 @@ class PerspectiveCamera(BaseCamera):
     def shoot(self):
         W = self.width
         H = self.height
-        P = self.P
+        origin = self.origin
+        zaxis = self.direction
+        yaxis = self.up
         t0 = self.t0
         t1 = self.t1
-        xp = chainer.backend.get_array_module(P)
+        xp = chainer.backend.get_array_module(origin)
+
+        zaxis = zaxis.reshape((1, 3, 1, 1))
+        yaxis = yaxis.reshape((1, 3, 1, 1))
+        xaxis = vnorm(vcross(yaxis, zaxis))
+        yaxis = vnorm(vcross(zaxis, xaxis))
+
+        xaxis = xaxis.reshape((1, 1, 3))
+        yaxis = yaxis.reshape((1, 1, 3))
+        zaxis = zaxis.reshape((1, 1, 3))
+
 
         angle = self.fov
         angle = (angle / 2) * math.pi / 180.0
         HH = math.tan(angle)
-        ro = P
+        ro = origin
         ro = F.tile(ro, (H, W, 1))
-        rd = xp.ones((H, W, 3), dtype=np.float32)
-        
-        yy = xp.tile(xp.arange(H, dtype=np.float32).reshape((H, 1, 1)), (1, W, 1))
-        xx = xp.tile(xp.arange(W, dtype=np.float32).reshape((1, W, 1)), (H, 1, 1))
-        yy = (1 - 2 * (yy + 0.5) / H) * HH
-        xx = (2 * (xx + 0.5) / W - 1) * HH 
-        #print(rd.shape, xx.shape, yy.shape)
-        rd[:, :, 0] = xx[:, :, 0]
-        rd[:, :, 1] = yy[:, :, 0]
-        
         ro = F.transpose(ro, (2, 0, 1))
+        
+        yy = xp.tile(xp.arange(H, dtype=np.float32).reshape((H, 1, 1)), (1, W, 1))  #(H, W, 1)
+        xx = xp.tile(xp.arange(W, dtype=np.float32).reshape((1, W, 1)), (H, 1, 1))  #(H, W, 1)
+        yy = (1 - 2 * (yy + 0.5) / H) * HH
+        xx = (2 * (xx + 0.5) / W - 1) * HH
+        rd = xx * xaxis + yy * yaxis + F.broadcast_to(zaxis, (H, W, 3))
         rd = F.transpose(rd, (2, 0, 1))
         rd = rd.reshape((1, 3, H, W))
         rd = vnorm(rd)

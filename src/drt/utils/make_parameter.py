@@ -19,3 +19,8 @@ def make_parameter(x):
     else:
         return Parameter(x)
 
+
+def add_to_model(model, name, param):
+    with model.init_scope():
+        setattr(model, name, param)
+
