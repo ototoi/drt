@@ -16,6 +16,9 @@ def make_parameter(x):
     elif isinstance(x, list):
         x = np.array(x, dtype=np.float32)
         return Parameter(x)
+    elif isinstance(x, float):
+        x = np.array([x], dtype=np.float32)
+        return Parameter(x)
     else:
         return Parameter(x)
 

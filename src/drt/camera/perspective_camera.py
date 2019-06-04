@@ -33,7 +33,7 @@ class PerspectiveCamera(BaseCamera):
         with self.init_scope():
             self.width = width
             self.height = height
-            self.fov = fov
+            self.fov = MP(fov)
             self.origin = MP(origin)
             self.direction = MP(direction)
             self.up = MP(up)
@@ -47,8 +47,10 @@ class PerspectiveCamera(BaseCamera):
         origin = self.origin
         zaxis = self.direction
         yaxis = self.up
+        angle = self.fov
         t0 = self.t0
         t1 = self.t1
+
         xp = chainer.backend.get_array_module(origin)
 
         zaxis = zaxis.reshape((1, 3, 1, 1))
@@ -59,11 +61,10 @@ class PerspectiveCamera(BaseCamera):
         xaxis = xaxis.reshape((1, 1, 3))
         yaxis = yaxis.reshape((1, 1, 3))
         zaxis = zaxis.reshape((1, 1, 3))
-
-
-        angle = self.fov
+        
+        #print(angle.shape)
         angle = (angle / 2) * math.pi / 180.0
-        HH = math.tan(angle)
+        HH = F.tan(angle)
         ro = origin
         ro = F.tile(ro, (H, W, 1))
         ro = F.transpose(ro, (2, 0, 1))

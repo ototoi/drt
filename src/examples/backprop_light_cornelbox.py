@@ -20,6 +20,7 @@ sys.path.append(os.path.normpath(os.path.join(
 
 from drt.light import PointLight
 from drt.utils import make_parameter as MP
+from drt.utils import add_to_model as AM
 from drt.vec import vdot, vnorm
 from drt.renderer import NormalRenderer, DiffuseRenderer, AlbedoRenderer
 from drt.material import DiffuseMaterial
@@ -161,8 +162,7 @@ def draw_goal_cornelbox(output, device=-1):
     
     light = PointLight(origin=GOAL_POS, color=[1, 1, 1])
     model = chainer.Link()
-    with model.init_scope():
-        setattr(model, 'data', light.origin)
+    AM(model, 'data', light.origin)
 
     fov = math.atan2(0.025, 0.035) * 180.0 / math.pi
     camera = PerspectiveCamera(512, 512, fov, [278.0, 273.0, -800.0])
@@ -212,8 +212,7 @@ def draw_start_cornelbox(output, device=-1):
     func = RaytraceFunc(shape=shape, light=light, camera=camera)
 
     model = chainer.Link()
-    with model.init_scope():
-        setattr(model, 'data', light.origin)
+    AM(model, 'data', light.origin)
 
     if device >= 0:
         chainer.cuda.get_device_from_id(device).use()
@@ -255,9 +254,7 @@ def calc_goal_cornelbox(output, device=-1):
 
     light = PointLight(origin=START_POS, color=[1, 1, 1])
     model = chainer.Link()
-    #model.add_param('data', (3, ), dtype=np.float32)   #Cannot use this for adding a paramter already existed  
-    with model.init_scope():
-        setattr(model, 'data', light.origin)
+    AM(model, 'data', light.origin)
 
     fov = math.atan2(0.025, 0.035) * 180.0 / math.pi
     camera = PerspectiveCamera(512, 512, fov, [278.0, 273.0, -800.0])

@@ -20,6 +20,7 @@ sys.path.append(os.path.normpath(os.path.join(
 
 from drt.light import PointLight
 from drt.utils import make_parameter as MP
+from drt.utils import add_to_model as AM
 from drt.vec import vdot, vnorm
 from drt.renderer import NormalRenderer, DiffuseRenderer, AlbedoRenderer
 from drt.material import DiffuseMaterial
@@ -233,9 +234,8 @@ def calc_goal_cornelbox(output, device=-1):
     func = RaytraceFunc(shape=shape, light=light, camera=camera)
 
     model = chainer.Link()
-    with model.init_scope():
-        setattr(model, 'data', materials["red"].albedo)
-
+    AM(model, 'data', materials["red"].albedo)
+    
     if device >= 0:
         chainer.cuda.get_device_from_id(device).use()
         model.to_gpu()
