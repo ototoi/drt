@@ -18,8 +18,9 @@ def is_positive(a):
 class PlaneShape(BaseShape):
     def __init__(self, origin, normal):
         super(PlaneShape, self).__init__()
-        self.origin = MP(origin)
-        self.normal = MP(normal)
+        with self.init_scope():
+            self.origin = MP(origin)
+            self.normal = MP(normal)
 
     def intersect(self, ro, rd, t0, t1):
         """

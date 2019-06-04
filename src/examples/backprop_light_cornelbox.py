@@ -25,72 +25,8 @@ from drt.renderer import NormalRenderer, DiffuseRenderer, AlbedoRenderer
 from drt.material import DiffuseMaterial
 from drt.shape import SphereShape, PlaneShape, TriangleShape, RectangleShape, CompositeShape, MaterizedShape
 from drt.camera import PerspectiveCamera
-from drt.net import ArrayLink
+from drt.shape.cornellbox_shape import create_light, create_floor, create_shortblock, create_tallblock
 
-
-def create_light(materials):
-    mat_l = materials["light"]
-    light = MaterizedShape(RectangleShape(
-        [343.0, 548.8, 227.0],
-        [343.0, 548.8, 332.0],
-        [213.0, 548.8, 332.0],
-        [213.0, 548.8, 227.0]), mat_l)
-
-    return light
-
-def create_floor(materials):
-    mat_w = materials["white"]
-    mat_r = materials["red"]
-    mat_g = materials["green"]
-    plane_top = MaterizedShape(RectangleShape(
-        [556.0, 548.8, 0.0],
-        [556.0, 548.8, 559.2],
-        [0.0,   548.8, 559.2],
-        [0.0,   548.8, 0.0]), mat_w)
-    plane_bottom = MaterizedShape(RectangleShape(
-        [556.0, 0.0,   0.0],
-        [0.0,   0.0,   0.0],
-        [0.0,   0.0, 559.2],
-        [556.0, 0.0, 559.2]), mat_w)
-    plane_back = MaterizedShape(RectangleShape(
-        [556.0,   0.0, 559.2],
-        [0.0,     0.0, 559.2],
-        [0.0,   548.8, 559.2],
-        [556.0, 548.8, 559.2]), mat_w)
-    plane_left = MaterizedShape(RectangleShape(
-        [556.0,   0.0,   0.0],
-        [556.0,   0.0, 559.2],
-        [556.0, 548.8, 559.2],
-        [556.0, 548.8,   0.0]), mat_r)
-    plane_right = MaterizedShape(RectangleShape(
-        [0.0,     0.0, 559.2],
-        [0.0,     0.0,   0.0],
-        [0.0,   548.8,   0.0],
-        [0.0,   548.8, 559.2]), mat_g)
-
-    cmps = CompositeShape([plane_top, plane_bottom, plane_back, plane_left, plane_right])
-    return cmps
-
-
-def create_shortblock(materials):
-    mat_w = materials["white"]
-    a = RectangleShape([130.0, 165.0,  65.0], [ 82.0, 165.0, 225.0], [240.0, 165.0, 272.0], [290.0, 165.0, 114.0])
-    b = RectangleShape([290.0, 0.0, 114.0], [290.0, 165.0, 114.0], [240.0, 165.0, 272.0], [240.0, 0.0, 272.0])
-    c = RectangleShape([130.0, 0.0, 65.0], [130.0, 165.0, 65.0], [290.0, 165.0, 114.0], [290.0, 0.0, 114.0])
-    d = RectangleShape([82.0, 0.0, 225.0], [82.0, 165.0, 225.0], [130.0, 165.0, 65.0], [130.0, 0.0, 65.0])
-    e = RectangleShape([240.0, 0.0, 272.0], [240.0, 165.0, 272.0], [82.0, 165.0, 225.0], [82.0, 0.0, 225.0])
-    cmps = MaterizedShape(CompositeShape([a, b, c, d, e]), mat_w)
-    return cmps
-
-def create_tallblock(materials):
-    mat_w = materials["white"]
-    a = RectangleShape([423.0, 330.0, 247.0], [265.0, 330.0, 296.0], [314.0, 330.0, 456.0], [472.0, 330.0, 406.0])
-    b = RectangleShape([423.0, 0.0, 247.0], [423.0, 330.0, 247.0], [472.0, 330.0, 406.0], [472.0, 0.0, 406.0])
-    c = RectangleShape([472.0, 0.0, 406.0], [472.0, 330.0, 406.0], [314.0, 330.0, 456.0], [314.0, 0.0, 456.0])
-    d = RectangleShape([314.0, 0.0, 456.0], [314.0, 330.0, 456.0], [265.0, 330.0, 296.0], [265.0, 0.0, 296.0])
-    e = RectangleShape([265.0, 0.0, 296.0], [265.0, 330.0, 296.0], [423.0, 330.0, 247.0], [423.0, 0.0, 247.0])
-    cmps = MaterizedShape(CompositeShape([a, b, c, d, e]), mat_w)
-    return cmps
 
 class RaytraceFunc(object):
     def __init__(self, shape, light, camera):
@@ -269,14 +205,15 @@ def draw_start_cornelbox(output, device=-1):
     shape = CompositeShape([shape_floor, shape_shortblock, shape_tallblock])
 
     light = PointLight(origin=START_POS, color=[1, 1, 1])
-    model = chainer.Link()
-    with model.init_scope():
-        setattr(model, 'data', light.origin)
 
     fov = math.atan2(0.025, 0.035) * 180.0 / math.pi
     camera = PerspectiveCamera(512, 512, fov, [278.0, 273.0, -800.0])
 
     func = RaytraceFunc(shape=shape, light=light, camera=camera)
+
+    model = chainer.Link()
+    with model.init_scope():
+        setattr(model, 'data', light.origin)
 
     if device >= 0:
         chainer.cuda.get_device_from_id(device).use()
