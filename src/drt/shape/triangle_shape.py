@@ -22,6 +22,7 @@ class TriangleShape(BaseShape):
             self.p0 = MP(p0)
             self.p1 = MP(p1)
             self.p2 = MP(p2)
+            self.eps = MP([1e-8])
 
 
     def intersect(self, ro, rd, t0, t1):
@@ -29,6 +30,7 @@ class TriangleShape(BaseShape):
         p0 = F.broadcast_to(self.p0.reshape((1, 3, 1, 1)), (B, 3, H, W))
         p1 = F.broadcast_to(self.p1.reshape((1, 3, 1, 1)), (B, 3, H, W))
         p2 = F.broadcast_to(self.p2.reshape((1, 3, 1, 1)), (B, 3, H, W))
+        eps = self.eps.reshape((1, 1, 1, 1))
 
         so = p0
         sn = vcross(p1 - p0, p2 - p0)
@@ -38,7 +40,7 @@ class TriangleShape(BaseShape):
         aa = so - ro
 
         A = vdot(aa, sn)
-        B = vdot(rd, sn)
+        B = vdot(rd, sn) + eps
         #print(A.shape, B.shape)
         tx = A / B
         p = ro + tx * rd

@@ -26,17 +26,33 @@ for y in range(H):
         rd[y, x, :] = r
 """
 
+def create_axies(direction, up):
+    zaxis = direction
+    yaxis = up
+
+    zaxis = zaxis.reshape((1, 3, 1, 1))
+    yaxis = yaxis.reshape((1, 3, 1, 1))
+    xaxis = vnorm(vcross(yaxis, zaxis))
+    yaxis = vnorm(vcross(zaxis, xaxis))
+
+    xaxis = xaxis.reshape((3,))
+    yaxis = yaxis.reshape((3,))
+    zaxis = zaxis.reshape((3,))
+    return xaxis, yaxis, zaxis
+
 
 class PerspectiveCamera(BaseCamera):
     def __init__(self, width, height, fov, origin, direction = [0, 0, 1], up = [0, 1, 0]):
         super(PerspectiveCamera, self).__init__()
+        xaxis, yaxis, zaxis = create_axies(MP(direction), MP(up))
         with self.init_scope():
             self.width = width
             self.height = height
             self.fov = MP(fov)
             self.origin = MP(origin)
-            self.direction = MP(direction)
-            self.up = MP(up)
+            self.xaxis = MP(xaxis.data)
+            self.yaxis = MP(yaxis.data)
+            self.zaxis = MP(zaxis.data)
             self.t0 = MP([0.01])
             self.t1 = MP([10000])
 
@@ -45,18 +61,19 @@ class PerspectiveCamera(BaseCamera):
         W = self.width
         H = self.height
         origin = self.origin
-        zaxis = self.direction
-        yaxis = self.up
+        xaxis = self.xaxis
+        zaxis = self.zaxis
+        yaxis = self.yaxis
         angle = self.fov
         t0 = self.t0
         t1 = self.t1
 
         xp = chainer.backend.get_array_module(origin)
 
-        zaxis = zaxis.reshape((1, 3, 1, 1))
-        yaxis = yaxis.reshape((1, 3, 1, 1))
-        xaxis = vnorm(vcross(yaxis, zaxis))
-        yaxis = vnorm(vcross(zaxis, xaxis))
+        #zaxis = zaxis.reshape((1, 3, 1, 1))
+        #yaxis = yaxis.reshape((1, 3, 1, 1))
+        #xaxis = vnorm(vcross(yaxis, zaxis))
+        #yaxis = vnorm(vcross(zaxis, xaxis))
 
         xaxis = xaxis.reshape((1, 1, 3))
         yaxis = yaxis.reshape((1, 1, 3))
