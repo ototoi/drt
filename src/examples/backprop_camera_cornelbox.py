@@ -193,7 +193,7 @@ def draw_start_cornelbox(output, device=-1):
     shape = CompositeShape([shape_floor, shape_shortblock, shape_tallblock])
 
     fov = math.atan2(0.025, 0.035) * 180.0 / math.pi
-    camera = PerspectiveCamera(512, 512, fov, origin=[300.0, 273.0, -800.0], direction=norm([-0.1, 0, 1]))
+    camera = PerspectiveCamera(512, 512, fov, origin=[400.0, 300, -800.0], direction=norm([-0.1, 0, 1]))
     light = PointLight(origin=START_POS, color=[0.1, 0.1, 0.1])
 
     func = RaytraceFunc(shape=shape, light=light, camera=camera)
@@ -235,7 +235,7 @@ def calc_goal_cornelbox(output, device=-1):
     shape = CompositeShape([shape_floor, shape_shortblock, shape_tallblock])
 
     fov = math.atan2(0.025, 0.035) * 180.0 / math.pi
-    camera = PerspectiveCamera(512, 512, fov, origin=[300.0, 273.0, -800.0], direction=norm([-0.1, 0, 1]))
+    camera = PerspectiveCamera(512, 512, fov, origin=[400.0, 300, -800.0], direction=norm([-0.1, 0, 1]))
     light = PointLight(origin=START_POS, color=[0.1, 0.1, 0.1])
 
     func = RaytraceFunc(shape=shape, light=light, camera=camera)
@@ -254,7 +254,7 @@ def calc_goal_cornelbox(output, device=-1):
     chainer.config.autotune = True
     chainer.cudnn_fast_batch_normalization = True
 
-    optimizer = optimizers.MomentumSGD(lr=1e-7, momentum=0.5)
+    optimizer = optimizers.MomentumSGD(lr=1e-6, momentum=0.5)
     optimizer.setup(model)
 
     #dataset
