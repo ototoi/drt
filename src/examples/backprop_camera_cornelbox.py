@@ -95,9 +95,9 @@ class RaytraceUpdater(StandardUpdater):
 
         reporter.report({
             'main/loss': loss,
-        #    'camera_position/x': self.model.camera_position[0],
-        #    'camera_position/y': self.model.camera_position[1],
-        #    'camera_position/z': self.model.camera_position[2],
+            'camera_position/x': self.model.camera_position[0],
+            'camera_position/y': self.model.camera_position[1],
+            'camera_position/z': self.model.camera_position[2],
             'camera_direction/x': self.model.camera_direction[0],
             'camera_direction/y': self.model.camera_direction[1],
             'camera_direction/z': self.model.camera_direction[2]
@@ -193,7 +193,7 @@ def draw_start_cornelbox(output, device=-1):
     shape = CompositeShape([shape_floor, shape_shortblock, shape_tallblock])
 
     fov = math.atan2(0.025, 0.035) * 180.0 / math.pi
-    camera = PerspectiveCamera(512, 512, fov, origin=[278.0, 273.0, -800.0], direction=norm([-0.1, 0, 1]))
+    camera = PerspectiveCamera(512, 512, fov, origin=[300.0, 273.0, -800.0], direction=norm([-0.1, 0, 1]))
     light = PointLight(origin=START_POS, color=[0.1, 0.1, 0.1])
 
     func = RaytraceFunc(shape=shape, light=light, camera=camera)
@@ -235,7 +235,7 @@ def calc_goal_cornelbox(output, device=-1):
     shape = CompositeShape([shape_floor, shape_shortblock, shape_tallblock])
 
     fov = math.atan2(0.025, 0.035) * 180.0 / math.pi
-    camera = PerspectiveCamera(512, 512, fov, origin=[278.0, 273.0, -800.0], direction=norm([-0.1, 0, 1]))
+    camera = PerspectiveCamera(512, 512, fov, origin=[300.0, 273.0, -800.0], direction=norm([-0.1, 0, 1]))
     light = PointLight(origin=START_POS, color=[0.1, 0.1, 0.1])
 
     func = RaytraceFunc(shape=shape, light=light, camera=camera)
@@ -276,9 +276,9 @@ def calc_goal_cornelbox(output, device=-1):
             'epoch',
             'iteration',
             'main/loss',
-       #     'camera_position/x',
-       #     'camera_position/y',
-       #     'camera_position/z',
+            'camera_position/x',
+            'camera_position/y',
+            'camera_position/z',
             'camera_direction/x',
             'camera_direction/y',
             'camera_direction/z'
