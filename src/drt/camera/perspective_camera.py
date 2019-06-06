@@ -75,9 +75,9 @@ class PerspectiveCamera(BaseCamera):
         #xaxis = vnorm(vcross(yaxis, zaxis))
         #yaxis = vnorm(vcross(zaxis, xaxis))
 
-        xaxis = xaxis.reshape((1, 1, 3))
-        yaxis = yaxis.reshape((1, 1, 3))
-        zaxis = zaxis.reshape((1, 1, 3))
+        xaxis = vnorm(xaxis.reshape((1, 3, 1, 1))).reshape((1, 1, 3))
+        yaxis = vnorm(yaxis.reshape((1, 3, 1, 1))).reshape((1, 1, 3))
+        zaxis = vnorm(zaxis.reshape((1, 3, 1, 1))).reshape((1, 1, 3))
         
         #print(angle.shape)
         angle = (angle / 2) * math.pi / 180.0
