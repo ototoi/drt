@@ -20,7 +20,7 @@ sys.path.append(os.path.normpath(os.path.join(
 
 from drt.light import PointLight
 from drt.utils import make_parameter as MP
-from drt.utils import add_to_model as AM
+from drt.utils import add_parameter as AM
 from drt.vec import vdot, vnorm
 from drt.renderer import NormalRenderer, DiffuseRenderer, AlbedoRenderer
 from drt.material import DiffuseMaterial

@@ -12,8 +12,9 @@ def vdot(a, b):
 
 
 def vnorm(a):
+    xp = chainer.backend.get_array_module(a)
     l = F.sqrt(vdot(a, a))
-    return a / l
+    return a / F.maximum(l, xp.array([1e-6], a.dtype))
 
 
 def vcross(a, b):

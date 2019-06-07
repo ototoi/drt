@@ -95,9 +95,12 @@ class RaytraceUpdater(StandardUpdater):
 
         reporter.report({
             'main/loss': loss,
-            'left/r': self.model.data[0],
-            'left/g': self.model.data[1],
-            'left/b': self.model.data[2]
+            'camera_position/x': self.model.camera_position[0],
+            'camera_position/y': self.model.camera_position[1],
+            'camera_position/z': self.model.camera_position[2],
+            'camera_direction/x': self.model.camera_direction[0],
+            'camera_direction/y': self.model.camera_direction[1],
+            'camera_direction/z': self.model.camera_direction[2]
         })
 
         y_data = y_data.data
@@ -133,22 +136,67 @@ class RaytraceDataset(DatasetMixin):
         return self.img
 
 
+def norm(v):
+    v = np.array(v, dtype=np.float32)
+    v = v / (np.sqrt(np.sum(v*v))+1e-6)
+    return v.tolist()
+
+
+def create_box(materials):
+    mat_w = materials["white"]
+    mat_r = materials["red"]
+    mat_g = materials["green"]
+    mat_b = materials["blue"]
+    
+    plane_top = MaterizedShape(RectangleShape(
+        [+0.5, +0.5, -0.5],
+        [+0.5, +0.5, +0.5],
+        [-0.5, +0.5, +0.5],
+        [-0.5, +0.5, -0.5]), mat_b)
+    plane_bottom = MaterizedShape(RectangleShape(
+        [+0.5, -0.5, -0.5],
+        [-0.5, -0.5, -0.5],
+        [-0.5, -0.5, +0.5],
+        [+0.5, -0.5, +0.5]), mat_b)
+    plane_back = MaterizedShape(RectangleShape(
+        [+0.5, -0.5, +0.5],
+        [-0.5, -0.5, +0.5],
+        [-0.5, +0.5, +0.5],
+        [+0.5, +0.5, +0.5]), mat_w)
+    plane_left = MaterizedShape(RectangleShape(
+        [+0.5, -0.5, +0.5],
+        [+0.5, -0.5, -0.5],
+        [+0.5, +0.5, -0.5],
+        [+0.5, +0.5, +0.5]), mat_r)
+    plane_right = MaterizedShape(RectangleShape(
+        [-0.5, -0.5, +0.5],
+        [-0.5, -0.5, -0.5],
+        [-0.5, +0.5, -0.5],
+        [-0.5, +0.5, +0.5]), mat_g)
+
+    cmps = CompositeShape([plane_top, plane_bottom, plane_back, plane_left, plane_right])
+    return cmps
+
 
 def draw_goal_cornelbox(output, device=-1):
     materials = {}
-    materials["light"] = DiffuseMaterial([1.0, 1.0, 1.0])
-    materials["white"] = DiffuseMaterial([0.5, 0.5, 0.5])
+    materials["black"] = DiffuseMaterial([0, 0, 0])
+    materials["white"] = DiffuseMaterial([1, 1, 1])
+    
+    materials["red"] = DiffuseMaterial([1.0, 0.0, 0.0])
     materials["green"] = DiffuseMaterial([0.0, 1.0, 0.0])
-    materials["red"] = DiffuseMaterial([0.0, 1.0, 0.0])
+    materials["blue"] = DiffuseMaterial([0.0, 0.0, 1.0])
 
-    shape_floor = create_floor(materials)
-    shape_shortblock = create_shortblock(materials)
-    shape_tallblock = create_tallblock(materials)
-    shape = CompositeShape([shape_floor, shape_shortblock, shape_tallblock])
+    materials["yellow"] = DiffuseMaterial([1.0, 1.0, 0.0])
 
-    fov = math.atan2(0.025, 0.035) * 180.0 / math.pi
-    camera = PerspectiveCamera(512, 512, fov, [278.0, 273.0, -800.0])
-    light = PointLight(origin=START_POS, color=[0.1, 0.1, 0.1])
+    box = create_box(materials)
+    s1 = MaterizedShape(SphereShape([0.2, -0.2, 0.2], [0.1]), materials["yellow"])
+    s2 = MaterizedShape(SphereShape([-0.2, 0.2, 0], [0.1]), materials["yellow"])
+    shape = CompositeShape([box, s1, s2])
+
+    fov = 45.0
+    camera = PerspectiveCamera(512, 512, fov, origin=[0, 0, -2.5], direction=norm([0, 0, 1]))
+    light = PointLight(origin=[0, 0.3, 0], color=[1, 1, 1])
 
     func = RaytraceFunc(shape=shape, light=light, camera=camera)
 
@@ -175,19 +223,23 @@ def draw_goal_cornelbox(output, device=-1):
 
 def draw_start_cornelbox(output, device=-1):
     materials = {}
-    materials["light"] = DiffuseMaterial([1.0, 1.0, 1.0])
-    materials["white"] = DiffuseMaterial([0.5, 0.5, 0.5])
+    materials["black"] = DiffuseMaterial([0, 0, 0])
+    materials["white"] = DiffuseMaterial([1, 1, 1])
+    
+    materials["red"] = DiffuseMaterial([1.0, 0.0, 0.0])
     materials["green"] = DiffuseMaterial([0.0, 1.0, 0.0])
-    materials["red"] = DiffuseMaterial([1.0, 0.01, 0.01])
+    materials["blue"] = DiffuseMaterial([0.0, 0.0, 1.0])
 
-    shape_floor = create_floor(materials)
-    shape_shortblock = create_shortblock(materials)
-    shape_tallblock = create_tallblock(materials)
-    shape = CompositeShape([shape_floor, shape_shortblock, shape_tallblock])
+    materials["yellow"] = DiffuseMaterial([1.0, 1.0, 0.0])
 
-    fov = math.atan2(0.025, 0.035) * 180.0 / math.pi
-    camera = PerspectiveCamera(512, 512, fov, [278.0, 273.0, -800.0])
-    light = PointLight(origin=START_POS, color=[0.1, 0.1, 0.1])
+    box = create_box(materials)
+    s1 = MaterizedShape(SphereShape([0.2, -0.2, 0.2], [0.1]), materials["yellow"])
+    s2 = MaterizedShape(SphereShape([-0.2, 0.2, 0], [0.1]), materials["yellow"])
+    shape = CompositeShape([box, s1, s2])
+
+    fov = 45.0
+    camera = PerspectiveCamera(512, 512, fov, origin=[0.3, 0, -2.5], direction=norm([0.1, 0, 1]))
+    light = PointLight(origin=[0, 0.3, 0], color=[1, 1, 1])
 
     func = RaytraceFunc(shape=shape, light=light, camera=camera)
 
@@ -217,24 +269,32 @@ def calc_goal_cornelbox(output, device=-1):
     outdir = os.path.dirname(output)
 
     materials = {}
-    materials["light"] = DiffuseMaterial([1.0, 1.0, 1.0])
-    materials["white"] = DiffuseMaterial([0.5, 0.5, 0.5])
+    materials["black"] = DiffuseMaterial([0, 0, 0])
+    materials["white"] = DiffuseMaterial([1, 1, 1])
+    
+    materials["red"] = DiffuseMaterial([1.0, 0.0, 0.0])
     materials["green"] = DiffuseMaterial([0.0, 1.0, 0.0])
-    materials["red"] = DiffuseMaterial([1.0, 0.01, 0.01])
+    materials["blue"] = DiffuseMaterial([0.0, 0.0, 1.0])
 
-    shape_floor = create_floor(materials)
-    shape_shortblock = create_shortblock(materials)
-    shape_tallblock = create_tallblock(materials)
-    shape = CompositeShape([shape_floor, shape_shortblock, shape_tallblock])
+    materials["yellow"] = DiffuseMaterial([1.0, 1.0, 0.0])
 
-    fov = math.atan2(0.025, 0.035) * 180.0 / math.pi
-    camera = PerspectiveCamera(512, 512, fov, [278.0, 273.0, -800.0])
-    light = PointLight(origin=START_POS, color=[0.1, 0.1, 0.1])
+    box = create_box(materials)
+    s1 = MaterizedShape(SphereShape([0.2, -0.2, 0.2], [0.1]), materials["yellow"])
+    s2 = MaterizedShape(SphereShape([-0.2, 0.2, 0], [0.1]), materials["yellow"])
+    shape = CompositeShape([box, s1, s2])
+
+    fov = 45.0
+    camera = PerspectiveCamera(512, 512, fov, origin=[0.3, 0, -2.5], direction=norm([0.1, 0, 1]))
+    light = PointLight(origin=[0, 0.3, 0], color=[1, 1, 1])
 
     func = RaytraceFunc(shape=shape, light=light, camera=camera)
 
     model = chainer.Link()
-    AM(model, 'data', materials["red"].albedo)
+    AM(model, 'camera_position', camera.origin)
+    AM(model, 'camera_direction', camera.zaxis)
+    AM(model, 'camera_direction_x', camera.xaxis)
+    AM(model, 'camera_direction_y', camera.yaxis)
+
     
     if device >= 0:
         chainer.cuda.get_device_from_id(device).use()
@@ -244,7 +304,7 @@ def calc_goal_cornelbox(output, device=-1):
     chainer.config.autotune = True
     chainer.cudnn_fast_batch_normalization = True
 
-    optimizer = optimizers.MomentumSGD(lr=1e-5, momentum=0.5)
+    optimizer = optimizers.SGD(lr=1e-6)
     optimizer.setup(model)
 
     #dataset
@@ -266,9 +326,12 @@ def calc_goal_cornelbox(output, device=-1):
             'epoch',
             'iteration',
             'main/loss',
-            'left/r',
-            'left/g',
-            'left/b',
+            'camera_position/x',
+            'camera_position/y',
+            'camera_position/z',
+            'camera_direction/x',
+            'camera_direction/y',
+            'camera_direction/z'
         ]), trigger=log_interval)
     trainer.extend(extensions.ProgressBar(update_interval=1))
 
@@ -293,9 +356,9 @@ def process(args):
 def main() -> int:
     parser = argparse.ArgumentParser(description='DRT')
     parser.add_argument(
-        '--goal', default='./data/backprop_light_cornelbox/goal.png', help='output file directory path')
+        '--goal', default='./data/backprop_spheres/goal.png', help='output file directory path')
     parser.add_argument(
-        '--start', default='./data/backprop_light_cornelbox/start.png', help='output file directory path')
+        '--start', default='./data/backprop_spheres/start.png', help='output file directory path')
     parser.add_argument(
         '--gpu', '-g', type=int, default=-1, help='GPU')
     args = parser.parse_args()

@@ -23,7 +23,8 @@ class AlbedoRenderer(BaseRenderer):
         
         b = F.transpose(b, (0, 2, 3, 1))
         albedo = F.transpose(albedo, (0, 2, 3, 1))
-        mask = F.where(b, xp.ones((B, H, W, 1), albedo.dtype), xp.zeros((B, H, W, 1), albedo.dtype))
-        img = albedo * mask
+        #mask = F.where(b, xp.ones((B, H, W, 1), albedo.dtype), xp.zeros((B, H, W, 1), albedo.dtype))
+        img = albedo
+        img = F.transpose(img, (0, 3, 1, 2))
 
         return img

@@ -21,6 +21,7 @@ class PlaneShape(BaseShape):
         with self.init_scope():
             self.origin = MP(origin)
             self.normal = MP(normal)
+            self.eps = MP([1e-6])
 
     def intersect(self, ro, rd, t0, t1):
         """
@@ -37,8 +38,11 @@ class PlaneShape(BaseShape):
         so = F.broadcast_to(so.reshape((1, 3, 1, 1)), (B, C, H, W))
         sn = self.normal
         sn = F.broadcast_to(sn.reshape((1, 3, 1, 1)), (B, C, H, W))
+        eps = F.broadcast_to(self.eps.reshape((1, 1, 1, 1)), (B, 1, H, W))
+
         A = vdot(so - ro, sn)
         B = vdot(rd, sn)
+        B = F.sign(B) * F.maximum(F.absolute(B), eps)   #
         tx = A / B
         MASK_B = is_positive(F.absolute(B)).reshape((B, 1, H, W))
         MASK_T0 = is_positive(tx - t0).reshape((B, 1, H, W))

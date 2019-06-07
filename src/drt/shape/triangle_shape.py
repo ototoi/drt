@@ -22,7 +22,7 @@ class TriangleShape(BaseShape):
             self.p0 = MP(p0)
             self.p1 = MP(p1)
             self.p2 = MP(p2)
-            self.eps = MP([1e-8])
+            self.eps = MP([1e-6])
 
 
     def intersect(self, ro, rd, t0, t1):
@@ -30,27 +30,27 @@ class TriangleShape(BaseShape):
         p0 = F.broadcast_to(self.p0.reshape((1, 3, 1, 1)), (B, 3, H, W))
         p1 = F.broadcast_to(self.p1.reshape((1, 3, 1, 1)), (B, 3, H, W))
         p2 = F.broadcast_to(self.p2.reshape((1, 3, 1, 1)), (B, 3, H, W))
-        eps = self.eps.reshape((1, 1, 1, 1))
+        eps = F.broadcast_to(self.eps.reshape((1, 1, 1, 1)), (B, 1, H, W))
 
         so = p0
         sn = vcross(p1 - p0, p2 - p0)
 
-        # print(p0.shape)
-        # print(sn.shape)
         aa = so - ro
 
         A = vdot(aa, sn)
-        B = vdot(rd, sn) + eps
-        #print(A.shape, B.shape)
+        B = vdot(rd, sn)                                #(1, 1, H, W)
+        #B = F.sign(B) * F.maximum(F.absolute(B), eps)   #
+        B = B + eps   #
+
         tx = A / B
         p = ro + tx * rd
         n01 = vcross(p0 - p, p1 - p)
         n12 = vcross(p1 - p, p2 - p)
         n20 = vcross(p2 - p, p0 - p)
 
-        MASK_P = is_positive(vdot(n01, n12))
-        MASK_Q = is_positive(vdot(n12, n20))
-        MASK_R = is_positive(vdot(n20, n01))
+        MASK_P = is_positive(vdot(n01, n12) + eps)
+        MASK_Q = is_positive(vdot(n12, n20) + eps)
+        MASK_R = is_positive(vdot(n20, n01) + eps)
 
         # is_positive(F.absolute(B).reshape((B, 1, H, W)))
         MASK_B = is_positive(F.absolute(B))

@@ -21,26 +21,32 @@ class SphereShape(BaseShape):
         with self.init_scope():
             self.origin = MP(origin)
             self.radius = MP(radius)
+            self.eps = MP([1e-6])
 
     def intersect(self, ro, rd, t0, t1):
         """
         r^2 = (x-x0)^2 + (y-y0)^2 + (z-z0)^2
         ro + t * rd = p
         """
-        B, C, H, W = ro.shape[:4]
+        B, _, H, W = ro.shape[:4]
         so = self.origin
-        so = F.broadcast_to(so.reshape((1, 3, 1, 1)), (B, C, H, W))
+        so = F.broadcast_to(so.reshape((1, 3, 1, 1)), (B, 3, H, W))
+        # print(so.shape)
         sr = self.radius
         sr2 = sr * sr
         sr2 = F.broadcast_to(sr2.reshape((1, 1, 1, 1)), (B, 1, H, W))
-        rs = ro - so  # (B, C, H, W)
-        B = vdot(rs, rd)  # (B, C, H, W)
-        B = vdot(rs, rd).reshape((B, 1, H, W))  # (B, 1, H, W)
-        C = vdot(rs, rs).reshape((B, 1, H, W)) - sr2  # (B, 1, H, W)
 
-        D = B * B - C
-        MASK_D = is_positive(D)
-        tx = -B - F.sqrt(F.absolute(D))
+        eps = F.broadcast_to(self.eps.reshape((1, 1, 1, 1)), (B, 1, H, W))
+
+        # print(sr2.shape)
+        rs = ro - so  # (B, C, H, W)
+        #B = vdot(rs, rd)  # (B, C, H, W)
+        BB = vdot(rs, rd).reshape((B, 1, H, W))  # (B, 1, H, W)
+        CC = vdot(rs, rs).reshape((B, 1, H, W)) - sr2
+
+        DD = BB * BB - CC
+        MASK_D = is_positive(DD)
+        tx = -BB - F.sqrt(F.maximum(F.absolute(DD), eps))
         MASK_T0 = is_positive(tx - t0)
         MASK_T1 = is_positive(t1 - tx)
 
