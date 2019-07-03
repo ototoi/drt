@@ -4,6 +4,7 @@ import glob
 import argparse
 
 import numpy as np
+from tqdm import tqdm
 
 
 def process(args):
@@ -25,12 +26,14 @@ def process(args):
     t_img[:, 2*w: , :] = g_img
     ipaths = sorted(glob.glob(os.path.join(idir, '00*.png')))
     os.makedirs(odir, exist_ok=True)
-    for i in range(len(ipaths)):
-        ipath = ipaths[i] 
-        img = cv2.imread(ipath)
-        t_img[:, 0:w, :] = img
-        opath = os.path.join(odir, '{0:08d}.png'.format(i))
-        cv2.imwrite(opath, t_img)
+    with tqdm(total=len(ipaths)) as pbar:
+        for i in range(len(ipaths)):
+            ipath = ipaths[i] 
+            img = cv2.imread(ipath)
+            t_img[:, 0:w, :] = img
+            opath = os.path.join(odir, '{0:08d}.png'.format(i))
+            cv2.imwrite(opath, t_img)
+            pbar.update(1)
     return 0
 
 

@@ -20,7 +20,7 @@ sys.path.append(os.path.normpath(os.path.join(
 
 from drt.light import PointLight
 from drt.utils import make_parameter as MP
-from drt.utils import add_parameter as AM
+from drt.utils import add_parameter as AP
 from drt.vec import vdot, vnorm
 from drt.renderer import NormalRenderer, DiffuseRenderer, AlbedoRenderer
 from drt.material import DiffuseMaterial
@@ -290,10 +290,10 @@ def calc_goal_cornelbox(output, device=-1):
     func = RaytraceFunc(shape=shape, light=light, camera=camera)
 
     model = chainer.Link()
-    AM(model, 'camera_position', camera.origin)
-    AM(model, 'camera_direction', camera.zaxis)
-    AM(model, 'camera_direction_x', camera.xaxis)
-    AM(model, 'camera_direction_y', camera.yaxis)
+    AP(model, 'camera_position', camera.origin)
+    AP(model, 'camera_direction', camera.zaxis)
+    AP(model, 'camera_direction_x', camera.xaxis)
+    AP(model, 'camera_direction_y', camera.yaxis)
 
     
     if device >= 0:

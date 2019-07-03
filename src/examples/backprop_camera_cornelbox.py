@@ -20,7 +20,7 @@ sys.path.append(os.path.normpath(os.path.join(
 
 from drt.light import PointLight
 from drt.utils import make_parameter as MP
-from drt.utils import add_parameter as AM
+from drt.utils import add_parameter as AP
 from drt.vec import vdot, vnorm
 from drt.renderer import NormalRenderer, DiffuseRenderer, AlbedoRenderer
 from drt.material import DiffuseMaterial
@@ -98,9 +98,9 @@ class RaytraceUpdater(StandardUpdater):
             'camera_position/x': self.model.camera_position[0],
             'camera_position/y': self.model.camera_position[1],
             'camera_position/z': self.model.camera_position[2],
-            'camera_direction/x': self.model.camera_direction[0],
-            'camera_direction/y': self.model.camera_direction[1],
-            'camera_direction/z': self.model.camera_direction[2]
+            'camera_direction/x': self.model.camera_zaxis[0],
+            'camera_direction/y': self.model.camera_zaxis[1],
+            'camera_direction/z': self.model.camera_zaxis[2]
         })
 
         y_data = y_data.data
@@ -241,10 +241,10 @@ def calc_goal_cornelbox(output, device=-1):
     func = RaytraceFunc(shape=shape, light=light, camera=camera)
 
     model = chainer.Link()
-    AM(model, 'camera_position', camera.origin)
-    AM(model, 'camera_direction', camera.zaxis)
-    AM(model, 'camera_direction_x', camera.xaxis)
-    AM(model, 'camera_direction_y', camera.yaxis)
+    AP(model, 'camera_position', camera.origin)
+    AP(model, 'camera_zaxis', camera.zaxis)
+    AP(model, 'camera_xaxis', camera.xaxis)
+    AP(model, 'camera_yaxis', camera.yaxis)
     
     if device >= 0:
         chainer.cuda.get_device_from_id(device).use()
