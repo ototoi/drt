@@ -90,10 +90,8 @@ def box_intersect(box, ro, ird, t0, t1):
     mask = ird > 0  # B, H, W, 3
     t0 = xp.broadcast_to(t0.reshape((B, H, W, 1)), (B, H, W, 3))
     t1 = xp.broadcast_to(t1.reshape((B, H, W, 1)), (B, H, W, 3))
-    t0 = xp.maximum(t0, (xp.where(mask, min_, max_) -
-                         ro[:, :, :, :]) * ird[:, :, :, :])  # B, H, W, 3
-    t1 = xp.minimum(t1, (xp.where(mask, max_, min_) -
-                         ro[:, :, :, :]) * ird[:, :, :, :])  # B, H, W, 3
+    t0 = xp.maximum(t0, (xp.where(mask, min_, max_) - ro) * ird)  # B, H, W, 3
+    t1 = xp.minimum(t1, (xp.where(mask, max_, min_) - ro) * ird)  # B, H, W, 3
     t0 = xp.max(t0, axis=3).reshape((B, H, W))  # B, H, W
     t1 = xp.min(t1, axis=3).reshape((B, H, W))  # B, H, W
     pred = np.any(t0 < t1)
@@ -153,7 +151,7 @@ class SWMeshAccelerator(object):
     SWMeshAccelerator: Software Mesh Accelerator
     '''
 
-    def __init__(self, block_size=8):
+    def __init__(self, block_size=16):
         self.triangles = []
         self.accelerator = None
         self.block_size = block_size
@@ -203,9 +201,12 @@ class SWMeshAccelerator(object):
         p = chainer.as_variable(xp.zeros((B, 3, H, W), np.float32))
         n = chainer.as_variable(xp.zeros((B, 3, H, W), np.float32))
         info = {'b': b, 't': t, 'p': p, 'n': n}
+
+        y: int
         for y in range(nH):
             y0 = y * bsz
             y1 = min(y0+bsz, H)
+            x: int
             for x in range(nW):
                 x0 = x*bsz
                 x1 = min(x0+bsz, W)
@@ -217,8 +218,7 @@ class SWMeshAccelerator(object):
                 for k in cinfo.keys():
                     ## info[:, :, y0:y1, x0:x1] = cinfo
                     i_ = cinfo[k]
-                    C = i_.shape[1]
-                    slices = [slice(B), slice(C), slice(y0, y1), slice(x0, x1)]
+                    slices = [slice(B), slice(i_.shape[1]), slice(y0, y1), slice(x0, x1)]
                     if k in info:
                         o_ = info[k]
                     else:
