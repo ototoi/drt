@@ -35,7 +35,7 @@ class PlaneShape(BaseShape):
         # t = (so - ro, sn) / (rd, sn)
         B, C, H, W = ro.shape[:4]
         so = self.origin
-        so = F.broadcast_to(so.reshape((1, 3, 1, 1)), (B, C, H, W))
+        so = F._to(so.reshape((1, 3, 1, 1)), (B, C, H, W))
         sn = self.normal
         sn = F.broadcast_to(sn.reshape((1, 3, 1, 1)), (B, C, H, W))
         eps = F.broadcast_to(self.eps.reshape((1, 1, 1, 1)), (B, 1, H, W))

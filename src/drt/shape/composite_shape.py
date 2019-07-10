@@ -28,7 +28,10 @@ class CompositeShape(BaseShape):
             b = b + bb
             t = tt
             for k in iinfo.keys():
-                info[k] = F.where(bb, iinfo[k], info[k])
+                if k in info:
+                    info[k] = F.where(bb, iinfo[k], info[k])
+                else:
+                    info[k] = iinfo[k]
         info['b'] = b
         info['t'] = t
 

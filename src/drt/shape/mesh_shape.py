@@ -63,7 +63,7 @@ class MeshShape(BaseShape):
         with self.init_scope():
             self.mesh = mesh
         if accelerator is None:
-            self.accelerator = BruteforceMeshAccelerator()
+            accelerator = BruteforceMeshAccelerator()
         self.accelerator = accelerator
         if self.accelerator is not None:
             for i in range(len(self.mesh)):
