@@ -2,9 +2,13 @@ import numpy as np
 import chainer
 import chainer.functions as F
 
+from .base_mesh_accelerator import BaseMeshAccelerator
 from ..triangle_shape import TriangleShape
 
-class BruteforceMeshAccelerator(object):
+class BruteforceMeshAccelerator(BaseMeshAccelerator):
+    """
+    BruteforceMeshAccelerator: Software Mesh Accelerator
+    """
     def __init__(self):
         self.triangles = []
 

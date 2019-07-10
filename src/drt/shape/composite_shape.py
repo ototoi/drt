@@ -9,6 +9,10 @@ from ..vec import vdot, vnorm
 
 
 class CompositeShape(BaseShape):
+    """
+    CompositeShape:
+    """
+
     def __init__(self, shapes):
         super(CompositeShape, self).__init__()
         with self.init_scope():
@@ -18,7 +22,7 @@ class CompositeShape(BaseShape):
         s = self.shapes[0]
         t = t1
         info = s.intersect(ro, rd, t0, t)
-        
+
         b = info['b']
         t = info['t']
         for s in self.shapes[1:]:
@@ -40,4 +44,3 @@ class CompositeShape(BaseShape):
     def to_gpu(self):
         for s in self.shapes:
             s.to_gpu()
-    

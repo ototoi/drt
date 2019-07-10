@@ -6,6 +6,7 @@ import numpy as np
 import chainer
 import chainer.functions as F
 
+from .base_mesh_accelerator import BaseMeshAccelerator
 from ..triangle_shape import TriangleShape
 from ...utils.set_item import set_item
 
@@ -23,16 +24,14 @@ class BVH(object):
             points = xp.transpose(points, (2, 0, 1))
             points = points.reshape((3, -1))
 
-            min_ = xp.min(points, axis=1).reshape((3, )) - 1e-6
-            max_ = xp.max(points, axis=1).reshape((3, )) + 1e-6
-            self.box = xp.array([min_, max_])
+            self.min = xp.min(points, axis=1).reshape((3, )) - 1e-6
+            self.max = xp.max(points, axis=1).reshape((3, )) + 1e-6
         else:
             b0 = bvhs[0]
             b1 = bvhs[1]
 
-            min_ = xp.minimum(b0.box[0, :], b1.box[0, :]).reshape((3, )) - 1e-6
-            max_ = xp.maximum(b0.box[1, :], b1.box[1, :]).reshape((3, )) + 1e-6
-            self.box = xp.array([min_, max_])
+            self.min = xp.minimum(b0.min, b1.min).reshape((3, )) - 1e-6
+            self.max = xp.maximum(b0.max, b1.max).reshape((3, )) + 1e-6
 
 
 def construct_bvh_box(bvh):
@@ -42,8 +41,8 @@ def construct_bvh_box(bvh):
         return bvh
     else:
         xp = chainer.backend.get_array_module(triangles[0])
-        min_ = bvh.box[0, :].reshape((3, ))
-        max_ = bvh.box[1, :].reshape((3, ))
+        min_ = bvh.min
+        max_ = bvh.max
         wid_ = max_ - min_
         plane = xp.argmax(wid_, axis=0)
         triangles = sorted(
@@ -60,31 +59,11 @@ def construct_bvh(triangles):
     return construct_bvh_box(tmp)
 
 
-"""
-int phase = r.phase();
-int sign[3] = {(phase >> 0) & 1, (phase >> 1) & 1, (phase >> 2) & 1};
-vector3 box[2] = {min, max};
-const vector3& org = r.origin();
-const vector3& idir = r.inversed_direction();
-
-for (int i = 0; i < 3; i++)
-{
-    tmin = std::max<real>(tmin, (box[sign[i]][i] - org[i]) * idir[i]);
-    tmax = std::min<real>(tmax, (box[1 - sign[i]][i] - org[i]) * idir[i]);
-}
-tmin *= real(1) - epsilon_<real>::value();
-tmax *= real(1) + epsilon_<real>::value();
-return tmin <= tmax;
-
-"""
-
-
-def box_intersect(box, ro, ird, t0, t1):
+def box_intersect(bvh, ro, ird, t0, t1):
     B, _, H, W = ro.shape[:4]
     xp = chainer.backend.get_array_module(ro)
-    box = xp.transpose(box, (1, 0))  # 3, 2
-    min_ = box[:,0]
-    max_ = box[:,1]
+    min_ = bvh.min
+    max_ = bvh.max
     ro = xp.transpose(ro, (0, 2, 3, 1))  # B, H, W, 3
     ird = xp.transpose(ird, (0, 2, 3, 1))  # B, H, W, 3
     mask = ird > 0  # B, H, W, 3
@@ -99,7 +78,7 @@ def box_intersect(box, ro, ird, t0, t1):
 
 
 def query_bvh(bvh, ro, ird, t0, t1):
-    if box_intersect(bvh.box, ro, ird, t0, t1):
+    if box_intersect(bvh, ro, ird, t0, t1):
         if len(bvh.bvhs) > 0:
             triangles = []
             for b in bvh.bvhs:
@@ -146,10 +125,10 @@ class SWBVHMeshAccelerator(object):
         return triangles
 
 
-class SWMeshAccelerator(object):
-    '''
+class SWMeshAccelerator(BaseMeshAccelerator):
+    """
     SWMeshAccelerator: Software Mesh Accelerator
-    '''
+    """
 
     def __init__(self, block_size=16):
         self.triangles = []
@@ -238,3 +217,4 @@ class SWMeshAccelerator(object):
             accelerator.add_triangle(t)
         accelerator.construct()
         self.accelerator = accelerator
+

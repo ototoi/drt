@@ -6,6 +6,9 @@ from chainer import Variable
 
 
 class BaseShape(chainer.Link):
+    """
+    BaseShape:
+    """
     def __init__(self):
         super(BaseShape, self).__init__()
 

@@ -16,6 +16,10 @@ def is_positive(a):
 
 
 class SphereShape(BaseShape):
+    """
+    SphereShape:
+    """
+
     def __init__(self, origin, radius):
         super(SphereShape, self).__init__()
         with self.init_scope():

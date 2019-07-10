@@ -12,6 +12,10 @@ from .triangle_shape import TriangleShape
 
 
 class RectangleShape(BaseShape):
+    """
+    RectangleShape:
+    """
+
     def __init__(self, p0, p1, p2, p3):
         super(RectangleShape, self).__init__()
         with self.init_scope():

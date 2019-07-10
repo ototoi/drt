@@ -35,10 +35,8 @@ class MeshLink(chainer.Link):
             else:
                 self.normals = None
 
-
     def __len__(self):
         return self.get_triangle_length()
-    
 
     def get_triangle_length(self):
         return len(self.indices) // 3
@@ -58,6 +56,10 @@ class MeshLink(chainer.Link):
 
 
 class MeshShape(BaseShape):
+    """
+    MeshShape: Shape for Mesh
+    """
+
     def __init__(self, mesh, accelerator=None):
         super(MeshShape, self).__init__()
         with self.init_scope():
@@ -77,23 +79,5 @@ class MeshShape(BaseShape):
     def intersect(self, ro, rd, t0, t1):
         return self.accelerator.intersect(ro, rd, t0, t1)
 
-    
-
-        
-
-
-
-
-
-
-
-
-
-
-    
-
-            
-
-
-
-
+    def to_gpu(self):
+        self.mesh.to_gpu()

@@ -16,6 +16,10 @@ def is_positive(a):
 
 
 class TriangleShape(BaseShape):
+    """
+    TriangleShape:
+    """
+
     def __init__(self, p0, p1, p2):
         super(TriangleShape, self).__init__()
         with self.init_scope():

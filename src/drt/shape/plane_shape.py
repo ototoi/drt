@@ -16,6 +16,10 @@ def is_positive(a):
 
 
 class PlaneShape(BaseShape):
+    """
+    PlaneShape:
+    """
+
     def __init__(self, origin, normal):
         super(PlaneShape, self).__init__()
         with self.init_scope():

@@ -13,6 +13,10 @@ from ..vec import vdot, vnorm
 
 
 class MaterizedShape(BaseShape):
+    """
+    MaterizedShape: 
+    """
+
     def __init__(self, shape, material):
         super(MaterizedShape, self).__init__()
         with self.init_scope():
