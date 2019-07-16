@@ -6,18 +6,19 @@ from chainer import Variable
 
 
 from .base_shape import BaseShape
-from .mesh_accelerator import BruteforceMeshAccelerator
+from .mesh_accelerator.sw import BruteforceMeshAccelerator
 from ..vec import vdot, vnorm
 from ..utils import make_parameter as MP
 
 
 class TriangleLink(chainer.Link):
-    def __init__(self, p0, p1, p2):
+    def __init__(self, p0, p1, p2, id=0):
         super(TriangleLink, self).__init__()
         with self.init_scope():
             self.p0 = p0
             self.p1 = p1
             self.p2 = p2
+            self.id = id
 
 
 class MeshLink(chainer.Link):
@@ -45,13 +46,15 @@ class MeshLink(chainer.Link):
         return self.positions.shape[0]
 
     def get_triangle(self, i):
+        xp = chainer.backend.get_array_module(self.positions)
         i0 = self.indices[3 * i + 0]
         i1 = self.indices[3 * i + 1]
         i2 = self.indices[3 * i + 2]
         p0 = self.positions[i0, :]
         p1 = self.positions[i1, :]
         p2 = self.positions[i2, :]
-        t = TriangleLink(p0, p1, p2)
+        id_ = xp.array([i], np.int32)
+        t = TriangleLink(p0, p1, p2, id=id_)
         return t
 
 

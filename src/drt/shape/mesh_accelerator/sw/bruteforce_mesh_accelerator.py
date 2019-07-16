@@ -2,8 +2,9 @@ import numpy as np
 import chainer
 import chainer.functions as F
 
-from .base_mesh_accelerator import BaseMeshAccelerator
-from ..triangle_shape import TriangleShape
+from ..base_mesh_accelerator import BaseMeshAccelerator
+from ...triangle_shape import TriangleShape
+
 
 class BruteforceMeshAccelerator(BaseMeshAccelerator):
     """
@@ -37,7 +38,7 @@ class BruteforceMeshAccelerator(BaseMeshAccelerator):
 
 
     def add_triangle(self, t):
-        t = TriangleShape(t.p0, t.p1, t.p2)
+        t = TriangleShape(t.p0, t.p1, t.p2, t.id)
         self.triangles.append(t)
 
 

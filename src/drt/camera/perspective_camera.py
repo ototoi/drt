@@ -27,11 +27,9 @@ for y in range(H):
 """
 
 def create_axies(direction, up):
-    zaxis = direction
-    yaxis = up
-
-    zaxis = zaxis.reshape((1, 3, 1, 1))
-    yaxis = yaxis.reshape((1, 3, 1, 1))
+    zaxis = vnorm(direction.reshape((1, 3, 1, 1)))
+    yaxis = vnorm(up.reshape((1, 3, 1, 1)))
+    
     xaxis = vnorm(vcross(yaxis, zaxis))
     yaxis = vnorm(vcross(zaxis, xaxis))
 

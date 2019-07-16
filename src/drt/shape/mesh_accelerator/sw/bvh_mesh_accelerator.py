@@ -6,9 +6,9 @@ import numpy as np
 import chainer
 import chainer.functions as F
 
-from .base_mesh_accelerator import BaseMeshAccelerator
-from ..triangle_shape import TriangleShape
-from ...utils.set_item import set_item
+from ..base_mesh_accelerator import BaseMeshAccelerator
+from ...triangle_shape import TriangleShape
+from ....utils.set_item import set_item
 
 
 class BVH(object):
@@ -19,19 +19,19 @@ class BVH(object):
             xp = chainer.backend.get_array_module(triangles[0])
             p0 = [t.p0.data for t in triangles]
             p1 = [t.p1.data for t in triangles]
-            p2 = [t.p1.data for t in triangles]
+            p2 = [t.p2.data for t in triangles]
             points = xp.array([p0, p1, p2], dtype=np.float32)
             points = xp.transpose(points, (2, 0, 1))
             points = points.reshape((3, -1))
 
-            self.min = xp.min(points, axis=1).reshape((3, )) - 1e-6
-            self.max = xp.max(points, axis=1).reshape((3, )) + 1e-6
+            self.min = xp.min(points, axis=1).reshape((3, )) - 1e-3
+            self.max = xp.max(points, axis=1).reshape((3, )) + 1e-3
         else:
             b0 = bvhs[0]
             b1 = bvhs[1]
 
-            self.min = xp.minimum(b0.min, b1.min).reshape((3, )) - 1e-6
-            self.max = xp.maximum(b0.max, b1.max).reshape((3, )) + 1e-6
+            self.min = xp.minimum(b0.min, b1.min).reshape((3, )) - 1e-3
+            self.max = xp.maximum(b0.max, b1.max).reshape((3, )) + 1e-3
 
 
 def construct_bvh_box(bvh):
@@ -71,18 +71,19 @@ def box_intersect(bvh, ro, ird, t0, t1):
     t1 = xp.broadcast_to(t1.reshape((B, H, W, 1)), (B, H, W, 3))
     t0 = xp.maximum(t0, (xp.where(mask, min_, max_) - ro) * ird)  # B, H, W, 3
     t1 = xp.minimum(t1, (xp.where(mask, max_, min_) - ro) * ird)  # B, H, W, 3
-    t0 = xp.max(t0, axis=3).reshape((B, H, W))  # B, H, W
-    t1 = xp.min(t1, axis=3).reshape((B, H, W))  # B, H, W
+    t0 = xp.max(t0, axis=3).reshape((B, 1, H, W))  # B, H, W
+    t1 = xp.min(t1, axis=3).reshape((B, 1, H, W))  # B, H, W
     pred = np.any(t0 < t1)
-    return pred
+    return pred, t0, t1
 
 
 def query_bvh(bvh, ro, ird, t0, t1):
-    if box_intersect(bvh, ro, ird, t0, t1):
+    b, tt0, tt1 = box_intersect(bvh, ro, ird, t0, t1)
+    if b:
         if len(bvh.bvhs) > 0:
             triangles = []
-            for b in bvh.bvhs:
-                triangles += query_bvh(b, ro, ird, t0, t1)
+            for cb in bvh.bvhs:
+                triangles += query_bvh(cb, ro, ird, tt0, tt1)
             return triangles
         else:
             return bvh.triangles
@@ -125,7 +126,7 @@ class SWBVHMeshAccelerator(object):
         return triangles
 
 
-class SWMeshAccelerator(BaseMeshAccelerator):
+class BVHMeshAccelerator(BaseMeshAccelerator):
     """
     SWMeshAccelerator: Software Mesh Accelerator
     """
@@ -138,7 +139,7 @@ class SWMeshAccelerator(BaseMeshAccelerator):
     def intersect_block(self, ro, rd, t0, t1):
         triangles = self.accelerator.query(ro, rd, t0, t1)
         if len(triangles) > 0:
-            # print(len(triangles))
+            #print(len(triangles))
             s = triangles[0]
             t = t1
             info = s.intersect(ro, rd, t0, t)
@@ -208,7 +209,7 @@ class SWMeshAccelerator(BaseMeshAccelerator):
         return info
 
     def add_triangle(self, t):
-        t = TriangleShape(t.p0, t.p1, t.p2)
+        t = TriangleShape(t.p0, t.p1, t.p2, t.id)
         self.triangles.append(t)
 
     def construct(self):

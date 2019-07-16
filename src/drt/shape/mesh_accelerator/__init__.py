@@ -1,3 +1,1 @@
 from .base_mesh_accelerator import BaseMeshAccelerator
-from .bruteforce_mesh_accelerator import BruteforceMeshAccelerator
-from .sw_mesh_accelerator import SWMeshAccelerator
