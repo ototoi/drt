@@ -91,7 +91,7 @@ def draw_goal_cornelbox(path, output, device=-1):
     #shape_floor = create_floor(materials)
     #shape_shortblock = create_shortblock(materials)
     #shape_tallblock = create_tallblock(materials)
-    mesh_shape = get_obj_shape(path, scale=15.0)
+    mesh_shape = get_obj_shape(path, scale=20.0)
     #print(mesh_shape.mesh.positions.shape)
     #print(mesh_shape.mesh.indices)
     mesh_shape = MaterizedShape(mesh_shape, materials["green"])
