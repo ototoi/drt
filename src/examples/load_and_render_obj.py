@@ -126,7 +126,7 @@ def draw_goal_cornelbox(path, output, device=-1):
     return 0
 
 def process(args):
-    draw_goal_cornelbox(args.input, args.output, device=gpu)
+    draw_goal_cornelbox(args.input, args.output, device=args.gpu)
     return 0
 
 def main() -> int:
