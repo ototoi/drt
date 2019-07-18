@@ -75,6 +75,7 @@ def get_obj_shape(path, scale=1.0):
     indices   = np.array([idx.vertex_index for idx in mesh_data.indices], dtype=np.int32)
     positions = np.array(mesh_data.positions, dtype=np.float32).reshape((-1, 3))
     positions *= scale
+    #positions -= np.array([0, -1, 0], positions.dtype)
     mesh_link = MeshLink(indices, positions)
     mesh_shape = MeshShape(mesh_link, accelerator=BVHMeshAccelerator())
     #mesh_shape = MeshShape(mesh_link, accelerator=None)
@@ -99,7 +100,7 @@ def draw_goal_cornelbox(path, output, device=-1):
     shape = mesh_shape #CompositeShape([mesh_shape])
 
     fov = math.atan2(0.025, 0.035) * 180.0 / math.pi
-    camera = PerspectiveCamera(256, 256, fov, origin=[8.0, 8.0, 8.0], direction=[-1, -1, -1])
+    camera = PerspectiveCamera(512, 512, fov, origin=[8.0, 8.0, 8.0], direction=[-1, -1, -1])
     light = PointLight(origin=[0, 100, 0], color=[1.0, 1.0, 1.0])
 
     func = RaytraceFunc(shape=shape, light=light, camera=camera)
@@ -125,13 +126,14 @@ def draw_goal_cornelbox(path, output, device=-1):
     return 0
 
 def process(args):
-    draw_goal_cornelbox(args.input, args.output)
+    draw_goal_cornelbox(args.input, args.output, device=gpu)
     return 0
 
 def main() -> int:
     parser = argparse.ArgumentParser(description='DRT')
     parser.add_argument('--input', '-i', default='./data/load_and_render_obj/bunny.obj', help='input file path')
     parser.add_argument('--output', '-o', default='./data/load_and_render_obj/goal.png', help='input file path')
+    parser.add_argument('--gpu', '-g', type=int, default=-1, help='gpu')
     args = parser.parse_args()
     return process(args)
 
