@@ -33,12 +33,13 @@ class TriangleShape(BaseShape):
 
     def __init__(self, p0, p1, p2, id):
         super(TriangleShape, self).__init__()
+        xp = chainer.backend.get_array_module(p0.data)
         with self.init_scope():
             self.p0 = MP(p0)
             self.p1 = MP(p1)
             self.p2 = MP(p2)
             self.id = MP(id)
-            self.eps = MP([1e-6])
+            self.eps = MP(xp.array([1e-6], xp.float32))
 
     def intersect(self, ro, rd, t0, t1):
         BB, _, H, W = ro.shape[:4]
