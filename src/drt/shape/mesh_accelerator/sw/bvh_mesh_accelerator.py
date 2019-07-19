@@ -19,7 +19,7 @@ class BVH(object):
         self.bvhs = bvhs
         self.plane = plane
         if len(triangles) > 0:
-            xp = chainer.backend.get_array_module(triangles[0])
+            xp = chainer.backend.get_array_module(triangles[0].p0.data)
             p0 = [t.p0.data for t in triangles]
             p1 = [t.p1.data for t in triangles]
             p2 = [t.p2.data for t in triangles]
