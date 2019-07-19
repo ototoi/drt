@@ -70,17 +70,22 @@ class MeshShape(BaseShape):
         if accelerator is None:
             accelerator = BruteforceMeshAccelerator()
         self.accelerator = accelerator
+        self.construct()
+
+    def construct(self):
         if self.accelerator is not None:
+            self.accelerator.clear()
             for i in range(len(self.mesh)):
                 t = self.mesh.get_triangle(i)
                 self.accelerator.add_triangle(t)
             self.accelerator.construct()
 
-    def construct(self):
-        self.accelerator.construct()
-
     def intersect(self, ro, rd, t0, t1):
-        return self.accelerator.intersect(ro, rd, t0, t1)
+        if self.accelerator is not None:
+            return self.accelerator.intersect(ro, rd, t0, t1)
+        else:
+            return {}
 
     def to_gpu(self):
         self.mesh.to_gpu()
+        self.construct()

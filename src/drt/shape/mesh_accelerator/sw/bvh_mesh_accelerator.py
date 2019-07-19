@@ -306,6 +306,9 @@ class BVHMeshAccelerator(BaseMeshAccelerator):
 
         return info
 
+    def clear(self):
+        self.triangles = []
+
     def add_triangle(self, t):
         t = TriangleShape(t.p0, t.p1, t.p2, t.id)
         self.triangles.append(t)
