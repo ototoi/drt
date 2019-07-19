@@ -70,8 +70,8 @@ class MeshShape(BaseShape):
         if accelerator is None:
             accelerator = BruteforceMeshAccelerator()
         self.accelerator = accelerator
-        self.construct()
-
+        #self.construct()
+    
     def construct(self):
         if self.accelerator is not None:
             self.accelerator.clear()
@@ -88,4 +88,3 @@ class MeshShape(BaseShape):
 
     def to_gpu(self):
         self.mesh.to_gpu()
-        self.construct()

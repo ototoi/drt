@@ -44,3 +44,8 @@ class CompositeShape(BaseShape):
     def to_gpu(self):
         for s in self.shapes:
             s.to_gpu()
+
+    def construct(self):
+        for s in self.shapes:
+            s.construct()
+       

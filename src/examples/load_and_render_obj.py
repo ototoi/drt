@@ -4,6 +4,7 @@ import sys
 import argparse
 import glob
 import math
+import time
 
 import numpy as np
 import cv2
@@ -108,6 +109,9 @@ def draw_goal_cornelbox(path, output, device=-1):
     if device >= 0:
         chainer.cuda.get_device_from_id(device).use()
         func.to_gpu()
+        mesh_shape.construct()
+    else:
+        mesh_shape.construct()
 
     y_data = func(1)
     y_data = y_data.data
@@ -126,7 +130,10 @@ def draw_goal_cornelbox(path, output, device=-1):
     return 0
 
 def process(args):
+    start = time.time()
     draw_goal_cornelbox(args.input, args.output, device=args.gpu)
+    elapsed_time = time.time() - start
+    print ("elapsed_time:{0}".format(elapsed_time) + "[sec]")
     return 0
 
 def main() -> int:

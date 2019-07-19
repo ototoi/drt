@@ -280,7 +280,7 @@ class BVHMeshAccelerator(BaseMeshAccelerator):
         p = chainer.as_variable(xp.zeros((B, 3, H, W), xp.float32))
         n = chainer.as_variable(xp.zeros((B, 3, H, W), xp.float32))
         info = {'b': b, 't': t, 'p': p, 'n': n}
-
+        
         y: int
         for y in range(nH):
             y0 = y * bsz

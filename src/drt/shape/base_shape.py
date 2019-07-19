@@ -14,3 +14,6 @@ class BaseShape(chainer.Link):
 
     def intersect(self, ro, rd, t0, t1):
         pass
+
+    def construct(self):
+        pass

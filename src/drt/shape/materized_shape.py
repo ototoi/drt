@@ -30,3 +30,6 @@ class MaterizedShape(BaseShape):
     def to_gpu(self):
         self.shape.to_gpu()
         self.material.to_gpu()
+
+    def construct(self):
+        self.shape.construct()
