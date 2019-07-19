@@ -28,7 +28,7 @@ def vcross_(a, b, xp):
     return c
 
 
-def intersect_triangle(bs, ids, p0, p1, p2, id, eps, ro, rd, t0, t1):
+def intersect_triangle(bs, ids, p0, p1, p2, id, ro, rd, t0, t1):
     xp = chainer.backend.get_array_module(ro)
     BB, _, H, W = ro.shape[:4]
     p0 = xp.broadcast_to(p0.reshape((1, 3, 1, 1)), (BB, 3, H, W))
