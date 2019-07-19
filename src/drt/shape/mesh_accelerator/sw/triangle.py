@@ -27,16 +27,34 @@ def vcross_(a, b, xp):
     c[:, 2, :, :] = a[:, 0, :, :]*b[:, 1, :, :] - a[:, 1, :, :]*b[:, 0, :, :]
     return c
 
+def vdot_e_(a, b, xp):
+    m = a * b
+    return xp.sum(m)
+
+def vcross_e_(a, b, xp):
+    x = (a[1]*b[2] - a[2]*b[1]).reshape((1,))
+    y = (a[2]*b[0] - a[0]*b[2]).reshape((1,))
+    z = (a[0]*b[1] - a[1]*b[0]).reshape((1,))
+    return xp.concatenate([x, y, z], axis=0)
+
+def vnorm_e_(a, xp):
+    return a / xp.sqrt(vdot_e_(a, a, xp))
+
+
+def where_(mask, m0, m1):
+    return m1 + (m0-m1) * mask
+
 
 def intersect_triangle(bs, ids, p0, p1, p2, id, ro, rd, t0, t1):
     xp = chainer.backend.get_array_module(ro)
     BB, _, H, W = ro.shape[:4]
+
+    sn = xp.broadcast_to(vnorm_e_(vcross_e_(p1 - p0, p2 - p0, xp), xp).reshape((1, 3, 1, 1)), (BB, 3, H, W))
+
     p0 = xp.broadcast_to(p0.reshape((1, 3, 1, 1)), (BB, 3, H, W))
     p1 = xp.broadcast_to(p1.reshape((1, 3, 1, 1)), (BB, 3, H, W))
     p2 = xp.broadcast_to(p2.reshape((1, 3, 1, 1)), (BB, 3, H, W))
     #eps = xp.broadcast_to(eps.reshape((1, 1, 1, 1)), (BB, 1, H, W))
-
-    sn = vnorm_(vcross_(p1 - p0, p2 - p0, xp), xp)
 
     aa = p0 - ro
 
@@ -67,6 +85,6 @@ def intersect_triangle(bs, ids, p0, p1, p2, id, ro, rd, t0, t1):
     face_id = xp.broadcast_to(id, (BB, 1, H, W))
 
     bs |= b
-    ids = xp.where(b, face_id, ids)
-    t1  = xp.where(b, tx, t1)
+    ids = where_(b.astype(xp.int32), face_id, ids)
+    t1  = where_(b.astype(xp.float32), tx, t1)
     return bs, ids, t0, t1

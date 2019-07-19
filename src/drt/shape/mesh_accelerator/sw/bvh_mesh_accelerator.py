@@ -70,12 +70,20 @@ def construct_bvh(triangles):
     tmp = BVH(triangles, xp=xp)
     return construct_bvh_box(tmp)
 
+def where_(mask, m0, m1):
+    return m1 + (m0-m1) * mask
+
+"""
 def get_minmax(mask, m0, m1, xp):
     B, H, W, _ = mask.shape[:4]
-    t0 = xp.where(mask[:,:,:,0], m0[0], m1[0]).reshape((B, H, W, 1))
-    t1 = xp.where(mask[:,:,:,1], m0[1], m1[1]).reshape((B, H, W, 1))
-    t2 = xp.where(mask[:,:,:,2], m0[2], m1[2]).reshape((B, H, W, 1))
+    t0 = where_(mask[:,:,:,0], m0[0], m1[0]).reshape((B, H, W, 1))
+    t1 = where_(mask[:,:,:,1], m0[1], m1[1]).reshape((B, H, W, 1))
+    t2 = where_(mask[:,:,:,2], m0[2], m1[2]).reshape((B, H, W, 1))
     return xp.concatenate([t0, t1, t2], axis=3)
+"""
+
+def get_minmax(mask, m0, m1):
+    return where_(mask, m0, m1)
 
 
 def intersect_box(bvh, ro, ird, t0, t1):
@@ -85,11 +93,11 @@ def intersect_box(bvh, ro, ird, t0, t1):
     max_ = bvh.max
     ro = xp.transpose(ro, (0, 2, 3, 1))  # B, H, W, 3
     ird = xp.transpose(ird, (0, 2, 3, 1))  # B, H, W, 3
-    mask = ird > 0  # B, H, W, 3
-    tt0 = (xp.where(mask, min_, max_) - ro) * ird
-    tt1 = (xp.where(mask, max_, min_) - ro) * ird
-    #tt0 = (get_minmax(mask, min_, max_, xp) - ro) * ird
-    #tt1 = (get_minmax(mask, max_, min_, xp) - ro) * ird
+    mask = (ird > 0).astype(xp.float32)  # B, H, W, 3
+    #tt0 = (xp.where(mask, min_, max_) - ro) * ird
+    #tt1 = (xp.where(mask, max_, min_) - ro) * ird
+    tt0 = (get_minmax(mask, min_, max_) - ro) * ird
+    tt1 = (get_minmax(mask, max_, min_) - ro) * ird
     #print(tt0.shape)
     #print(tt1.shape)
     tt0 = xp.transpose(xp.max(tt0, axis=3).reshape((B, H, W, 1)), (0, 3, 1, 2))  # B, 1, H, W
@@ -98,28 +106,13 @@ def intersect_box(bvh, ro, ird, t0, t1):
     tt1 = xp.minimum(tt1, t1)
     
     mask = tt0 < tt1
-    tt0 = xp.where(mask, tt0, t0)
-    tt1 = xp.where(mask, tt1, t1)
     pred = xp.any(mask)
-    return pred, tt0, tt1
+    return pred
 
-
-def query_bvh(bvh, ro, ird, t0, t1):
-    b, tt0, tt1 = intersect_box(bvh, ro, ird, t0, t1)
-    if b:
-        if len(bvh.bvhs) > 0:
-            triangles = []
-            for cb in bvh.bvhs:
-                triangles += query_bvh(cb, ro, ird, tt0, tt1)
-            return triangles
-        else:
-            return bvh.triangles
-    else:
-        return []
 
 def intersect_bvh(bs, ids, bvh, table, ro, rd, ird, t0, t1):
     #xp = chainer.backend.get_array_module(ro)
-    b, _, _ = intersect_box(bvh, ro, ird, t0, t1)
+    b = intersect_box(bvh, ro, ird, t0, t1)
     if b:
         tt0 = t0
         tt1 = t1
@@ -220,7 +213,7 @@ class BVHMeshAccelerator(BaseMeshAccelerator):
     SWMeshAccelerator: Software Mesh Accelerator
     """
 
-    def __init__(self, block_size=8):
+    def __init__(self, block_size=16):
         self.triangles = []
         self.accelerator = None
         self.block_size = block_size
