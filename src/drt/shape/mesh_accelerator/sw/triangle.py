@@ -21,11 +21,11 @@ def vnorm_(a, xp):
 
 
 def vcross_(a, b, xp):
-    B, _, H, W = a.shape[:4]
-    x = a[:, 1, :, :]*b[:, 2, :, :] - a[:, 2, :, :]*b[:, 1, :, :]
-    y = a[:, 2, :, :]*b[:, 0, :, :] - a[:, 0, :, :]*b[:, 2, :, :]
-    z = a[:, 0, :, :]*b[:, 1, :, :] - a[:, 1, :, :]*b[:, 0, :, :]
-    return xp.concatenate([x, y, z], axis=1).reshape((B, 3, H, W))
+    c = xp.zeros((a.shape), a.dtype)
+    c[:, 0, :, :] = a[:, 1, :, :]*b[:, 2, :, :] - a[:, 2, :, :]*b[:, 1, :, :]
+    c[:, 1, :, :] = a[:, 2, :, :]*b[:, 0, :, :] - a[:, 0, :, :]*b[:, 2, :, :]
+    c[:, 2, :, :] = a[:, 0, :, :]*b[:, 1, :, :] - a[:, 1, :, :]*b[:, 0, :, :]
+    return c
 
 
 def intersect_triangle(bs, ids, p0, p1, p2, id, eps, ro, rd, t0, t1):

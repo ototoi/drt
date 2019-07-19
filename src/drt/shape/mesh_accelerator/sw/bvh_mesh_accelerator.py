@@ -68,6 +68,7 @@ def get_minmax(mask, m0, m1, xp):
     t2 = xp.where(mask[:,:,:,2], m0[2], m1[2]).reshape((B, H, W, 1))
     return xp.concatenate([t0, t1, t2], axis=3)
 
+
 def intersect_box(bvh, ro, ird, t0, t1):
     B, _, H, W = ro.shape[:4]
     xp = chainer.backend.get_array_module(ro)

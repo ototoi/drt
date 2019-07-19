@@ -37,6 +37,20 @@ def vcross_(a, b, xp):
     z = a[:, 0, :, :]*b[:, 1, :, :] - a[:, 1, :, :]*b[:, 0, :, :]
     return xp.concatenate([x, y, z], axis=1).reshape((B, 3, H, W))
 
+
+def vdot_e(a, b):
+    m = a * b
+    return F.sum(m)
+
+def vcross_e(a, b):
+    x = (a[1]*b[2] - a[2]*b[1]).reshape((1,))
+    y = (a[2]*b[0] - a[0]*b[2]).reshape((1,))
+    z = (a[0]*b[1] - a[1]*b[0]).reshape((1,))
+    return F.concat([x, y, z], axis=0)
+
+def vnorm_e(a):
+    return a * F.rsqrt(vdot_e(a, a))
+
 """
 def save_boolean_img(path, mask):
     B, C, H, W = mask.shape[:4]
@@ -65,15 +79,15 @@ class TriangleShape(BaseShape):
     def intersect(self, ro, rd, t0, t1):
         xp = chainer.backend.get_array_module(ro)
         BB, _, H, W = ro.shape[:4]
+        
         p0 = F.broadcast_to(self.p0.reshape((1, 3, 1, 1)), (BB, 3, H, W))
         p1 = F.broadcast_to(self.p1.reshape((1, 3, 1, 1)), (BB, 3, H, W))
         p2 = F.broadcast_to(self.p2.reshape((1, 3, 1, 1)), (BB, 3, H, W))
         #eps = F.broadcast_to(self.eps.reshape((1, 1, 1, 1)), (BB, 1, H, W))
 
-        so = p0
-        sn = vnorm(vcross(p1 - p0, p2 - p0))
+        sn = F.broadcast_to(vnorm_e(vcross_e(self.p1 - self.p0, self.p2 - self.p0)).reshape((1, 3, 1, 1)), (BB, 3, H, W))
 
-        aa = so - ro
+        aa = p0 - ro
 
         A = vdot(aa, sn)
         B = vdot(rd, sn)                                #(1, 1, H, W)
@@ -90,9 +104,9 @@ class TriangleShape(BaseShape):
         MASK_Q = is_positive(vdot(n12, n20) + eps)
         MASK_R = is_positive(vdot(n20, n01) + eps)
         """
-        e0 = (p0 - p).data
-        e1 = (p1 - p).data
-        e2 = (p2 - p).data
+        e0 = p0.data - p.data
+        e1 = p1.data - p.data
+        e2 = p2.data - p.data
         n01 = vcross_(e0, e1, xp)
         n12 = vcross_(e1, e2, xp)
         n20 = vcross_(e2, e0, xp)
@@ -104,8 +118,8 @@ class TriangleShape(BaseShape):
         MASK_B = is_positive_(xp.abs(B.data))
 
         #MASK_TN = is_positive(tx)
-        MASK_T0 = is_positive_((tx - t0).data)
-        MASK_T1 = is_positive_((t1 - tx).data)
+        MASK_T0 = is_positive_(tx.data - t0.data)
+        MASK_T1 = is_positive_(t1.data - tx.data)
 
         """
         save_boolean_img('./MASK_TN.png', MASK_TN)
