@@ -145,11 +145,12 @@ def get_triangles(bvh):
         return bvh.triangles
 
 
-def count_direction(rd, plane, xp):
-    rd = rd[:, plane, :, :].reshape((-1))
-    rd = rd > 0.0
-    #print(np.count_nonzero(rd), len(rd))
-    return xp.count_nonzero(rd) >= (len(rd) // 2)
+def get_direction_table(rd):
+    xp = chainer.backend.get_array_module(rd)
+    rd = xp.transpose(rd, (0, 2, 3, 1))
+    rd = rd.reshape((-1, 3))
+    counts = xp.count_nonzero(rd >= 0, axis=0)
+    return counts >= (rd.shape[0] // 2)
 
 
 class SWBVHMeshAccelerator(object):
@@ -187,7 +188,7 @@ class SWBVHMeshAccelerator(object):
         t1_ = t1.data
         bs_  = xp.zeros((B, 1, H, W), xp.bool)
         ids_ = xp.zeros((B, 1, H, W), xp.int32) * -1
-        table = [count_direction(rd_, 0, xp), count_direction(rd_, 1, xp), count_direction(rd_, 2, xp)]
+        table = get_direction_table(rd_)
         #print(table)
         bs_, ids_, _, _ = intersect_bvh(bs_, ids_, self.root, table, ro_, rd_, ird_, t0_, t1_)
         ids_ = ids_.reshape((-1))
