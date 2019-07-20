@@ -45,21 +45,20 @@ def where_(mask, m0, m1):
     return m1 + (m0-m1) * mask
 
 
-def intersect_triangle(bs, ids, p0, p1, p2, id, ro, rd, t0, t1):
+def intersect_triangle(bs, ids, p0, p1, p2, fn, id, ro, rd, t0, t1):
     xp = chainer.backend.get_array_module(ro)
     BB, _, H, W = ro.shape[:4]
-
-    sn = xp.broadcast_to(vnorm_e_(vcross_e_(p1 - p0, p2 - p0, xp), xp).reshape((1, 3, 1, 1)), (BB, 3, H, W))
 
     p0 = xp.broadcast_to(p0.reshape((1, 3, 1, 1)), (BB, 3, H, W))
     p1 = xp.broadcast_to(p1.reshape((1, 3, 1, 1)), (BB, 3, H, W))
     p2 = xp.broadcast_to(p2.reshape((1, 3, 1, 1)), (BB, 3, H, W))
-    #eps = xp.broadcast_to(eps.reshape((1, 1, 1, 1)), (BB, 1, H, W))
+    fn = xp.broadcast_to(fn.reshape((1, 3, 1, 1)), (BB, 3, H, W))
+    id = xp.broadcast_to(id, (BB, 1, H, W))
 
     aa = p0 - ro
 
-    A = vdot_(aa, sn, xp)
-    B = vdot_(rd, sn, xp)                                #(1, 1, H, W)
+    A = vdot_(aa, fn, xp)
+    B = vdot_(rd, fn, xp)                                #(1, 1, H, W)
     #B = F.sign(B) * F.maximum(F.absolute(B), eps)   #
 
     tx = A / B
@@ -81,10 +80,8 @@ def intersect_triangle(bs, ids, p0, p1, p2, id, ro, rd, t0, t1):
     MASK_T1 = is_positive_(t1 - tx)
 
     b = MASK_P & MASK_Q & MASK_R & MASK_B & MASK_T0 & MASK_T1
-    
-    face_id = xp.broadcast_to(id, (BB, 1, H, W))
 
     bs |= b
-    ids = where_(b.astype(xp.int32), face_id, ids)
-    t1  = where_(b.astype(xp.float32), tx, t1)
+    ids = where_(b, id, ids)
+    t1  = where_(b, tx, t1)
     return bs, ids, t0, t1

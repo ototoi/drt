@@ -51,6 +51,9 @@ def vcross_e(a, b):
 def vnorm_e(a):
     return a * F.rsqrt(vdot_e(a, a))
 
+def where_(mask, m0, m1):
+    return m1 + (m0-m1) * mask
+
 """
 def save_boolean_img(path, mask):
     B, C, H, W = mask.shape[:4]
@@ -68,13 +71,16 @@ class TriangleShape(BaseShape):
 
     def __init__(self, p0, p1, p2, id):
         super(TriangleShape, self).__init__()
-        xp = chainer.backend.get_array_module(p0.data)
+        p0 = MP(p0)
+        p1 = MP(p1)
+        p2 = MP(p2)
+        fn = vnorm_e(vcross_e(p1 - p0, p2 - p0))
         with self.init_scope():
-            self.p0 = MP(p0)
-            self.p1 = MP(p1)
-            self.p2 = MP(p2)
+            self.p0 = p0
+            self.p1 = p1
+            self.p2 = p2
+            self.fn = fn
             self.id = MP(id)
-            self.eps = MP(xp.array([1e-6], xp.float32))
 
     def intersect(self, ro, rd, t0, t1):
         xp = chainer.backend.get_array_module(ro)
@@ -83,14 +89,13 @@ class TriangleShape(BaseShape):
         p0 = F.broadcast_to(self.p0.reshape((1, 3, 1, 1)), (BB, 3, H, W))
         p1 = F.broadcast_to(self.p1.reshape((1, 3, 1, 1)), (BB, 3, H, W))
         p2 = F.broadcast_to(self.p2.reshape((1, 3, 1, 1)), (BB, 3, H, W))
-        #eps = F.broadcast_to(self.eps.reshape((1, 1, 1, 1)), (BB, 1, H, W))
-
-        sn = F.broadcast_to(vnorm_e(vcross_e(self.p1 - self.p0, self.p2 - self.p0)).reshape((1, 3, 1, 1)), (BB, 3, H, W))
+        fn = F.broadcast_to(self.fn.reshape((1, 3, 1, 1)), (BB, 3, H, W))
+        face_id = F.broadcast_to(self.id, (BB, 1, H, W))
 
         aa = p0 - ro
 
-        A = vdot(aa, sn)
-        B = vdot(rd, sn)                                #(1, 1, H, W)
+        A = vdot(aa, fn)
+        B = vdot(rd, fn)                                #(1, 1, H, W)
         #B = F.sign(B) * F.maximum(F.absolute(B), eps)   #
 
         tx = A / B
@@ -137,9 +142,8 @@ class TriangleShape(BaseShape):
         t = F.where(b, tx, t1)
         p = ro + t * rd
 
-        bn = is_positive_(vdot_(rd.data, sn.data, xp))
+        bn = is_positive_(vdot_(rd.data, fn.data, xp))
         #bn = F.cast(bn, np.bool)
-        n = F.where(bn, -sn, sn)
-        face_id = F.broadcast_to(self.id, (BB, 1, H, W))
+        n = F.where(bn, -fn, fn)
         #print('shape', face_id.shape)
         return {'b': b, 't': t, 'p': p, 'n': n, 'face_id': face_id}

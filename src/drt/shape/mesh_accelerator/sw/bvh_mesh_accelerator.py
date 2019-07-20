@@ -15,10 +15,11 @@ from .triangle import intersect_triangle
 
 
 class Triangle(object):
-    def __init__(self, p0, p1, p2, id):
+    def __init__(self, p0, p1, p2, fn, id):
         self.p0 = p0
         self.p1 = p1
         self.p2 = p2
+        self.fn = fn
         self.id = id
     
 
@@ -82,9 +83,6 @@ def get_minmax(mask, m0, m1, xp):
     return xp.concatenate([t0, t1, t2], axis=3)
 """
 
-def get_minmax(mask, m0, m1):
-    return where_(mask, m0, m1)
-
 
 def intersect_box(bvh, ro, ird, t0, t1):
     B, _, H, W = ro.shape[:4]
@@ -96,8 +94,8 @@ def intersect_box(bvh, ro, ird, t0, t1):
     mask = (ird > 0).astype(xp.float32)  # B, H, W, 3
     #tt0 = (xp.where(mask, min_, max_) - ro) * ird
     #tt1 = (xp.where(mask, max_, min_) - ro) * ird
-    tt0 = (get_minmax(mask, min_, max_) - ro) * ird
-    tt1 = (get_minmax(mask, max_, min_) - ro) * ird
+    tt0 = (where_(mask, min_, max_) - ro) * ird
+    tt1 = (where_(mask, max_, min_) - ro) * ird
     #print(tt0.shape)
     #print(tt1.shape)
     tt0 = xp.transpose(xp.max(tt0, axis=3).reshape((B, H, W, 1)), (0, 3, 1, 2))  # B, 1, H, W
@@ -127,11 +125,12 @@ def intersect_bvh(bs, ids, bvh, table, ro, rd, ird, t0, t1):
             return bs, ids, tt0, tt1
         else:
             for t in bvh.triangles:
-                p0_ = t.p0
-                p1_ = t.p1
-                p2_ = t.p2
-                id_ = t.id
-                bs, ids, tt0, tt1 = intersect_triangle(bs, ids, p0_, p1_, p2_, id_, ro, rd, tt0, tt1)
+                p0 = t.p0
+                p1 = t.p1
+                p2 = t.p2
+                fn = t.fn
+                id = t.id
+                bs, ids, tt0, tt1 = intersect_triangle(bs, ids, p0, p1, p2, fn, id, ro, rd, tt0, tt1)
             return bs, ids, tt0, tt1
     else:
         return bs, ids, t0, t1
@@ -164,14 +163,16 @@ class SWBVHMeshAccelerator(object):
         p0 = t.p0.data
         p1 = t.p1.data
         p2 = t.p2.data
+        fn = t.fn.data
         id = t.id.data
 
         p0 = cuda.to_cpu(p0)
         p1 = cuda.to_cpu(p1)
         p2 = cuda.to_cpu(p2)
+        fn = cuda.to_cpu(fn)
         id = cuda.to_cpu(id)
 
-        t = Triangle(p0, p1, p2, id)
+        t = Triangle(p0, p1, p2, fn, id)
         self.triangles.append(t)
 
     def construct(self):
@@ -180,26 +181,14 @@ class SWBVHMeshAccelerator(object):
         # print(len(triangles))
     
     
-    def intersect(self, ro, rd, t0, t1):
-        B, _, H, W = ro.shape[:4]
-        xp = chainer.backend.get_array_module(ro)
-        ro_ = ro.data
-        rd_ = rd.data
+    def intersect(self, ro_, rd_, t0_, t1_):
+        B, _, H, W = ro_.shape[:4]
+        xp = chainer.backend.get_array_module(ro_)
         ird_ = xp.where(rd_ >= 0, xp.maximum(rd_, +1e-6), xp.minimum(rd_, -1e-6))
         ird_ = 1.0 / ird_
-        t0_ = t0.data
-        t1_ = t1.data
         table = get_direction_table(rd_)
-
         bs_  = np.zeros((B, 1, H, W), xp.bool)
         ids_ = np.zeros((B, 1, H, W), xp.int32) * -1
-        table = cuda.to_cpu(table)
-        ro_ = cuda.to_cpu(ro_)
-        rd_ = cuda.to_cpu(rd_)
-        ird_ = cuda.to_cpu(ird_)
-        t0_ = cuda.to_cpu(t0_)
-        t1_ = cuda.to_cpu(t1_)
-
         #print(table)
         bs_, ids_, _, _ = intersect_bvh(bs_, ids_, self.root, table, ro_, rd_, ird_, t0_, t1_)
         ids_ = ids_.reshape((-1))
@@ -218,10 +207,10 @@ class BVHMeshAccelerator(BaseMeshAccelerator):
         self.accelerator = None
         self.block_size = block_size
 
-    def intersect_block(self, ro, rd, t0, t1):
+    def intersect_block(self, ro, rd, t0, t1, ro_, rd_, t0_, t1_):
         B, _, H, W = ro.shape[:4]
         xp = chainer.backend.get_array_module(ro)
-        bac, ids = self.accelerator.intersect(ro, rd, t0, t1)
+        bac, ids = self.accelerator.intersect(ro_, rd_, t0_, t1_)
         if bac and len(ids) > 0:
             #print(len(ids))
             s = self.triangles[ids[0]]
@@ -263,6 +252,16 @@ class BVHMeshAccelerator(BaseMeshAccelerator):
         t = t0
         p = chainer.as_variable(xp.zeros((B, 3, H, W), xp.float32))
         n = chainer.as_variable(xp.zeros((B, 3, H, W), xp.float32))
+
+        ro_ = ro.data
+        rd_ = rd.data
+        t0_ = t0.data
+        t1_ = t1.data
+        ro_ = cuda.to_cpu(ro_)
+        rd_ = cuda.to_cpu(rd_)
+        t0_ = cuda.to_cpu(t0_)
+        t1_ = cuda.to_cpu(t1_)
+
         info = {'b': b, 't': t, 'p': p, 'n': n}
         
         y: int
@@ -277,7 +276,13 @@ class BVHMeshAccelerator(BaseMeshAccelerator):
                 crd = rd[:, :, y0:y1, x0:x1]
                 ct0 = t0[:, :, y0:y1, x0:x1]
                 ct1 = t1[:, :, y0:y1, x0:x1]
-                cinfo = self.intersect_block(cro, crd, ct0, ct1)
+
+                cro_ = ro_[:, :, y0:y1, x0:x1]
+                crd_ = rd_[:, :, y0:y1, x0:x1]
+                ct0_ = t0_[:, :, y0:y1, x0:x1]
+                ct1_ = t1_[:, :, y0:y1, x0:x1]
+
+                cinfo = self.intersect_block(cro, crd, ct0, ct1, cro_, crd_, ct0_, ct1_)
                 for k in cinfo.keys():
                     ## info[:, :, y0:y1, x0:x1] = cinfo
                     i_ = cinfo[k]
