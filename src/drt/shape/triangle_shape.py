@@ -26,7 +26,7 @@ def vdot_(a, b, xp):
 
 
 def vnorm_(a, xp):
-    l = xp.rsqrt(vdot_(a, a, xp))
+    l = xp.rsqrt(xp.mamimum(vdot_(a, a, xp), 1e-6))
     return a * l
 
 
@@ -81,8 +81,9 @@ class TriangleShape(BaseShape):
             self.p2 = p2
             self.fn = fn
             self.id = MP(id)
+            self.eps = MP([1e-6])
 
-    def intersect(self, ro, rd, t0, t1):
+    def intersect_NODIFF(self, ro, rd, t0, t1):
         xp = chainer.backend.get_array_module(ro)
         BB, _, H, W = ro.shape[:4]
         
@@ -91,15 +92,19 @@ class TriangleShape(BaseShape):
         p2 = F.broadcast_to(self.p2.reshape((1, 3, 1, 1)), (BB, 3, H, W))
         fn = F.broadcast_to(self.fn.reshape((1, 3, 1, 1)), (BB, 3, H, W))
         face_id = F.broadcast_to(self.id, (BB, 1, H, W))
+        eps = F.broadcast_to(self.eps.reshape((1, 1, 1, 1)), (BB, 1, H, W))
 
         aa = p0 - ro
 
         A = vdot(aa, fn)
-        B = vdot(rd, fn)                                #(1, 1, H, W)
-        #B = F.sign(B) * F.maximum(F.absolute(B), eps)   #
+        B = vdot(rd, fn)
+        B = F.where(xp.abs(B.data) < eps.data , eps, B)
 
-        tx = A / B
+        #tx = F.where((xp.abs(A.data) < 1e-6)&(xp.abs(B.data) < 1e-6), t1, A / B)
+
+        tx = F.maximum(t0, F.minimum(A / B, t1))
         p = ro + tx * rd
+        
         """
         n01 = vnorm(vcross(p0 - p, p1 - p))
         n12 = vnorm(vcross(p1 - p, p2 - p))
@@ -109,6 +114,7 @@ class TriangleShape(BaseShape):
         MASK_Q = is_positive(vdot(n12, n20) + eps)
         MASK_R = is_positive(vdot(n20, n01) + eps)
         """
+
         e0 = p0.data - p.data
         e1 = p1.data - p.data
         e2 = p2.data - p.data
@@ -142,9 +148,60 @@ class TriangleShape(BaseShape):
         t = F.where(b, tx, t1)
         p = ro + t * rd
 
-        bn = is_positive_(vdot_(rd.data, fn.data, xp))
+        #bn = is_positive_(vdot_(rd.data, fn.data, xp))
         #bn = is_positive(vdot(rd, fn))
-        n = F.where(bn, -fn, fn)
+        #n = F.where(bn, -fn, fn)
+        n = - xp.sign(vdot_(rd.data, fn.data, xp)) * fn
         #n = fn * -xp.sign(vdot_(rd.data, fn.data, xp))
         #print('shape', face_id.shape)
         return {'b': b, 't': t, 'p': p, 'n': n, 'face_id': face_id}
+
+    def intersect_DIFF(self, ro, rd, t0, t1):
+        xp = chainer.backend.get_array_module(ro)
+        BB, _, H, W = ro.shape[:4]
+        
+        p0 = F.broadcast_to(self.p0.reshape((1, 3, 1, 1)), (BB, 3, H, W))
+        p1 = F.broadcast_to(self.p1.reshape((1, 3, 1, 1)), (BB, 3, H, W))
+        p2 = F.broadcast_to(self.p2.reshape((1, 3, 1, 1)), (BB, 3, H, W))
+        fn = F.broadcast_to(self.fn.reshape((1, 3, 1, 1)), (BB, 3, H, W))
+        face_id = F.broadcast_to(self.id, (BB, 1, H, W))
+        eps = F.broadcast_to(self.eps.reshape((1, 1, 1, 1)), (BB, 1, H, W))
+
+        aa = p0 - ro
+
+        A = vdot(aa, fn)
+        B = vdot(rd, fn)
+        B = F.where(xp.abs(B.data) < eps.data , eps, B)
+
+        tx = A / B
+        p = ro + tx * rd
+        n01 = vcross(p0 - p, p1 - p)
+        n12 = vcross(p1 - p, p2 - p)
+        n20 = vcross(p2 - p, p0 - p)
+
+        MASK_P = is_positive(vdot(n01, n12))
+        MASK_Q = is_positive(vdot(n12, n20))
+        MASK_R = is_positive(vdot(n20, n01))
+
+        # is_positive(F.absolute(B).reshape((B, 1, H, W)))
+        MASK_B = is_positive(F.absolute(B))
+        # print(MASK_B.shape)
+
+        MASK_T0 = is_positive(tx - t0)
+        MASK_T1 = is_positive(t1 - tx)
+
+        b = F.cast(MASK_P * MASK_Q * MASK_R *
+                   MASK_B * MASK_T0 * MASK_T1, 'bool')
+        #print("MASK_B", MASK_B.shape)
+        #print("b", b.shape)
+        t = F.where(b, tx, t1)
+        p = ro + t * rd
+
+        #print(p.shape, p.dtype)
+        bn = F.cast(is_positive(vdot(rd, fn)), 'bool')
+        n = F.where(bn, -fn, fn)
+
+        return {'b': b, 't': t, 'p': p, 'n': n, 'face_id': face_id}
+
+    def intersect(self, ro, rd, t0, t1):
+        return self.intersect_NODIFF(ro, rd, t0, t1)

@@ -74,7 +74,7 @@ def save_progress_image(odir, i, img):
     cv2.imwrite(path, img)
 
 class RaytraceUpdater(StandardUpdater):
-    def __init__(self, iterator, models, func, optimizers, odir, device=None):
+    def __init__(self, iterator, models, func, optimizers, odir, device=-1):
         optimizer = list(optimizers.values())[0]
         super(RaytraceUpdater, self).__init__(iterator, optimizer, device=device)
         self.models = models
@@ -82,6 +82,7 @@ class RaytraceUpdater(StandardUpdater):
         self.func = func
         self.odir = odir
         self.count = 0
+        self.device = device
 
     def update_core(self):
         train_iter = self.get_iterator('main')
@@ -325,9 +326,9 @@ def process(args):
 def main() -> int:
     parser = argparse.ArgumentParser(description='DRT')
     parser.add_argument(
-        '--goal', default='./data/backprop_camera_cornelbox/goal.png', help='output file directory path')
+        '--goal', default='./data/backprop_camera_cornelbox2/goal.png', help='output file directory path')
     parser.add_argument(
-        '--start', default='./data/backprop_camera_cornelbox/start.png', help='output file directory path')
+        '--start', default='./data/backprop_camera_cornelbox2/start.png', help='output file directory path')
     parser.add_argument(
         '--gpu', '-g', type=int, default=-1, help='GPU')
     args = parser.parse_args()
