@@ -143,7 +143,8 @@ class TriangleShape(BaseShape):
         p = ro + t * rd
 
         bn = is_positive_(vdot_(rd.data, fn.data, xp))
-        #bn = F.cast(bn, np.bool)
+        #bn = is_positive(vdot(rd, fn))
         n = F.where(bn, -fn, fn)
+        #n = fn * -xp.sign(vdot_(rd.data, fn.data, xp))
         #print('shape', face_id.shape)
         return {'b': b, 't': t, 'p': p, 'n': n, 'face_id': face_id}
