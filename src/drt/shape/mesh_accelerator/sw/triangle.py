@@ -85,3 +85,74 @@ def intersect_triangle(bs, ids, p0, p1, p2, fn, id, ro, rd, t0, t1):
     ids = where_(b, id, ids)
     t1  = where_(b, tx, t1)
     return bs, ids, t0, t1
+
+
+def intersect_triangle_batch(bs, ids, p0, p1, p2, fn, id, ro, rd, t0, t1):
+    xp = chainer.backend.get_array_module(ro)
+    BB = p0.shape[0]
+    _, _, H, W = ro.shape[:4]
+
+    bs = xp.broadcast_to(bs.reshape(( 1, 1, H, W)), (BB, 1, H, W))
+    ids = xp.broadcast_to(ids.reshape(( 1, 1, H, W)), (BB, 1, H, W))
+    p0 = xp.broadcast_to(p0.reshape((BB, 3, 1, 1)), (BB, 3, H, W))
+    p1 = xp.broadcast_to(p1.reshape((BB, 3, 1, 1)), (BB, 3, H, W))
+    p2 = xp.broadcast_to(p2.reshape((BB, 3, 1, 1)), (BB, 3, H, W))
+    fn = xp.broadcast_to(fn.reshape((BB, 3, 1, 1)), (BB, 3, H, W))
+    id = xp.broadcast_to(id.reshape((BB, 1, 1, 1)), (BB, 1, H, W))
+    ro = xp.broadcast_to(ro.reshape(( 1, 3, H, W)), (BB, 3, H, W))
+    rd = xp.broadcast_to(rd.reshape(( 1, 3, H, W)), (BB, 3, H, W))
+    t0 = xp.broadcast_to(t0.reshape(( 1, 1, H, W)), (BB, 1, H, W))
+    t1 = xp.broadcast_to(t1.reshape(( 1, 1, H, W)), (BB, 1, H, W))
+
+
+    aa = p0 - ro
+
+    A = vdot_(aa, fn, xp)
+    B = vdot_(rd, fn, xp)                                #(1, 1, H, W)
+    #B = F.sign(B) * F.maximum(F.absolute(B), eps)   #
+
+    tx = A / B
+    p = ro + tx * rd
+    e0 = p0 - p
+    e1 = p1 - p
+    e2 = p2 - p
+    n01 = vcross_(e0, e1, xp)
+    n12 = vcross_(e1, e2, xp)
+    n20 = vcross_(e2, e0, xp)
+
+    MASK_P = is_positive_(vdot_(n01, n12, xp))
+    MASK_Q = is_positive_(vdot_(n12, n20, xp))
+    MASK_R = is_positive_(vdot_(n20, n01, xp))
+
+    MASK_B = is_positive_(xp.abs(B))
+
+    MASK_T0 = is_positive_(tx - t0)
+    MASK_T1 = is_positive_(t1 - tx)
+
+    b = MASK_P & MASK_Q & MASK_R & MASK_B & MASK_T0 & MASK_T1
+    #print(type(b), b.shape, b.dtype)
+    #print(type(bs), bs.shape, bs.dtype)
+    bs = bs + b
+    ids = where_(b, id, ids)
+    t1  = where_(b, tx, t1)
+    return bs, ids, t0, t1
+
+
+def reduce_triangle_batch(bs, ids, t0, t1):
+    xp = chainer.backend.get_array_module(t0)
+    BB, _, H, W = bs.shape[:4]
+    kids = ids[0,:,:,:]
+    kt0 = t0[0,:,:,:]
+    kt1 = xp.min(t1, axis=0)
+
+    for i in range(1, BB):
+        b = (kt1 >= t1[i,:,:,:])
+        kids = where_(b, ids[i,:,:,:], kids)
+    
+    bs = xp.sum(bs, axis=0).reshape(1, 1, H, W)
+    ids = kids.reshape(1, 1, H, W)
+    t0 = kt0.reshape(1, 1, H, W)
+    t1 = kt1.reshape(1, 1, H, W)
+    return bs, ids, t0, t1
+
+

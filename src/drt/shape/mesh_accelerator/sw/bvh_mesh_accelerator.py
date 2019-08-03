@@ -9,9 +9,10 @@ import chainer.functions as F
 
 from ..base_mesh_accelerator import BaseMeshAccelerator
 from ...triangle_shape import TriangleShape
+from ...batched_triangle_shape import BatchedTriangleShape, batched_triangle_intersect
 from ....utils.set_item import set_item
 
-from .triangle import intersect_triangle
+from .triangle import intersect_triangle, intersect_triangle_batch, reduce_triangle_batch
 
 
 class Triangle(object):
@@ -36,6 +37,12 @@ class BVH(object):
             points = xp.array([p0, p1, p2], dtype=np.float32)
             points = xp.transpose(points, (2, 0, 1))
             points = points.reshape((3, -1))
+
+            self.p0 = xp.concatenate([t.p0.reshape((1, 3)).data for t in self.triangles], axis=0)
+            self.p1 = xp.concatenate([t.p1.reshape((1, 3)).data for t in self.triangles], axis=0)
+            self.p2 = xp.concatenate([t.p2.reshape((1, 3)).data for t in self.triangles], axis=0)
+            self.fn = xp.concatenate([t.fn.reshape((1, 3)).data for t in self.triangles], axis=0)
+            self.id = xp.concatenate([t.id.reshape((1, 1)).data for t in self.triangles], axis=0)
 
             self.min = xp.min(points, axis=1).reshape((3, )) - 1e-3
             self.max = xp.max(points, axis=1).reshape((3, )) + 1e-3
@@ -109,7 +116,7 @@ def intersect_box(bvh, ro, ird, t0, t1):
 
 
 def intersect_bvh(bs, ids, bvh, table, ro, rd, ird, t0, t1):
-    #xp = chainer.backend.get_array_module(ro)
+    xp = chainer.backend.get_array_module(ro)
     b = intersect_box(bvh, ro, ird, t0, t1)
     if b:
         tt0 = t0
@@ -124,13 +131,13 @@ def intersect_bvh(bs, ids, bvh, table, ro, rd, ird, t0, t1):
                 bs, ids, tt0, tt1 = intersect_bvh(bs, ids, bvh.bvhs[0], table, ro, rd, ird, tt0, tt1)
             return bs, ids, tt0, tt1
         else:
-            for t in bvh.triangles:
-                p0 = t.p0
-                p1 = t.p1
-                p2 = t.p2
-                fn = t.fn
-                id = t.id
-                bs, ids, tt0, tt1 = intersect_triangle(bs, ids, p0, p1, p2, fn, id, ro, rd, tt0, tt1)
+            p0 = bvh.p0
+            p1 = bvh.p1
+            p2 = bvh.p2
+            fn = bvh.fn
+            id = bvh.id
+            bs, ids, tt0, tt1 = intersect_triangle_batch(bs, ids, p0, p1, p2, fn, id, ro, rd, tt0, tt1)
+            bs, ids, tt0, tt1 = reduce_triangle_batch(bs, ids, tt0, tt1)
             return bs, ids, tt0, tt1
     else:
         return bs, ids, t0, t1
@@ -202,39 +209,62 @@ class BVHMeshAccelerator(BaseMeshAccelerator):
     SWMeshAccelerator: Software Mesh Accelerator
     """
 
-    def __init__(self, block_size=16):
+    def __init__(self, block_size=32):
         self.triangles = []
         self.accelerator = None
         self.block_size = block_size
+
+    def intersect_block_iterate(self, ids, ro, rd, t0, t1):
+        s = self.triangles[ids[0]]
+        t = t1
+        info = s.intersect(ro, rd, t0, t)
+
+        b = info['b']
+        t = info['t']
+        for i in ids[1:]:
+            s = self.triangles[i]
+            iinfo = s.intersect(ro, rd, t0, t)
+            bb = iinfo['b']
+            tt = iinfo['t']
+            b = b + bb
+            t = tt
+            for k in iinfo.keys():
+                if k not in ['b', 't']:
+                    if k in info:
+                        info[k] = F.where(bb, iinfo[k], info[k])
+                    else:
+                        info[k] = iinfo[k]
+        info['b'] = b
+        info['t'] = t
+
+        return info
+
+    
+    def intersect_block_batch(self, ids, ro, rd, t0, t1):
+        triangles = [self.triangles[id] for id in ids]
+        p0 = [t.p0.reshape((1, 3)) for t in triangles]
+        p1 = [t.p1.reshape((1, 3)) for t in triangles]
+        p2 = [t.p2.reshape((1, 3)) for t in triangles]
+        eps = [t.eps.reshape((1, 1)) for t in triangles]
+        fn = [t.fn.reshape((1, 3)) for t in triangles]
+        id = [t.id.reshape((1, 1)) for t in triangles]
+        p0 = F.concat(p0, axis=0)
+        p1 = F.concat(p1, axis=0)
+        p2 = F.concat(p2, axis=0)
+        eps = F.concat(eps, axis=0)
+        fn = F.concat(fn, axis=0)
+        id = F.concat(id, axis=0)
+        info = batched_triangle_intersect(p0, p1, p2, eps, fn, id, ro, rd, t0, t1)
+        return info
+    
 
     def intersect_block(self, ro, rd, t0, t1, ro_, rd_, t0_, t1_):
         B, _, H, W = ro.shape[:4]
         xp = chainer.backend.get_array_module(ro)
         bac, ids = self.accelerator.intersect(ro_, rd_, t0_, t1_)
         if bac and len(ids) > 0:
-            #print(len(ids))
-            s = self.triangles[ids[0]]
-            t = t1
-            info = s.intersect(ro, rd, t0, t)
-
-            b = info['b']
-            t = info['t']
-            for i in ids[1:]:
-                s = self.triangles[i]
-                iinfo = s.intersect(ro, rd, t0, t)
-                bb = iinfo['b']
-                tt = iinfo['t']
-                b = b + bb
-                t = tt
-                for k in iinfo.keys():
-                    if k in info:
-                        info[k] = F.where(bb, iinfo[k], info[k])
-                    else:
-                        info[k] = iinfo[k]
-            info['b'] = b
-            info['t'] = t
-
-            return info 
+            return self.intersect_block_batch(ids, ro, rd, t0, t1)
+            #return self.intersect_block_iterate(ids, ro, rd, t0, t1)
         else:
             b = chainer.as_variable(xp.zeros((B, 1, H, W), xp.bool))
             t = t0
