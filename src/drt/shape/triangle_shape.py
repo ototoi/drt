@@ -71,6 +71,7 @@ class TriangleShape(BaseShape):
 
     def __init__(self, p0, p1, p2, id):
         super(TriangleShape, self).__init__()
+        xp = chainer.backend.get_array_module(p0)
         p0 = MP(p0)
         p1 = MP(p1)
         p2 = MP(p2)
@@ -81,7 +82,7 @@ class TriangleShape(BaseShape):
             self.p2 = p2
             self.fn = fn
             self.id = MP(id)
-            self.eps = MP([1e-6])
+            self.eps = MP(xp.array([1e-6],xp.float32))
 
     def intersect_NODIFF(self, ro, rd, t0, t1):
         xp = chainer.backend.get_array_module(ro)

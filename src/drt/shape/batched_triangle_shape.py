@@ -150,6 +150,7 @@ class BatchedTriangleShape(BaseShape):
 
     def __init__(self, p0, p1, p2, fn, id):
         super(BatchedTriangleShape, self).__init__()
+        xp = chainer.backend.get_array_module(p0)
         p0 = MP(p0)
         p1 = MP(p1)
         p2 = MP(p2)
@@ -160,7 +161,7 @@ class BatchedTriangleShape(BaseShape):
             self.p2 = p2
             self.fn = fn
             self.id = MP(id)
-            self.eps = MP([1e-6])
+            self.eps = MP(xp.array([1e-6],xp.float32))
 
     def intersect(self, ro, rd, t0, t1):
         return batched_triangle_intersect(self.p0, self.p1, self.p2, self.eps, self.fn, self.id, ro, rd, t0, t1)
