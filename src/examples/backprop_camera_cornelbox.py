@@ -74,12 +74,13 @@ def save_progress_image(odir, i, img):
     cv2.imwrite(path, img)
 
 class RaytraceUpdater(StandardUpdater):
-    def __init__(self, iterator, model, func, optimizer, odir, device=None):
+    def __init__(self, iterator, model, func, optimizer, odir, device=-1):
         super(RaytraceUpdater, self).__init__(iterator, optimizer, device=device)
         self.model = model
         self.func = func
         self.odir = odir
         self.count = 0
+        self.device = device
 
     def update_core(self):
         train_iter = self.get_iterator('main')
@@ -193,7 +194,7 @@ def draw_start_cornelbox(output, device=-1):
     shape = CompositeShape([shape_floor, shape_shortblock, shape_tallblock])
 
     fov = math.atan2(0.025, 0.035) * 180.0 / math.pi
-    camera = PerspectiveCamera(512, 512, fov, origin=[400.0, 300, -800.0], direction=norm([-0.1, 0, 1]))
+    camera = PerspectiveCamera(512, 512, fov, origin=[400.0, 300, -800.0], direction=norm([0, 0, 1]))
     light = PointLight(origin=START_POS, color=[0.1, 0.1, 0.1])
 
     func = RaytraceFunc(shape=shape, light=light, camera=camera)
@@ -235,7 +236,7 @@ def calc_goal_cornelbox(output, device=-1):
     shape = CompositeShape([shape_floor, shape_shortblock, shape_tallblock])
 
     fov = math.atan2(0.025, 0.035) * 180.0 / math.pi
-    camera = PerspectiveCamera(512, 512, fov, origin=[400.0, 300, -800.0], direction=norm([-0.1, 0, 1]))
+    camera = PerspectiveCamera(512, 512, fov, origin=[400.0, 300, -800.0], direction=norm([0, 0, 1]))
     light = PointLight(origin=START_POS, color=[0.1, 0.1, 0.1])
 
     func = RaytraceFunc(shape=shape, light=light, camera=camera)

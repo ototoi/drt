@@ -11,7 +11,7 @@ from ..vec import vdot, vnorm
 
 class DiffuseRenderer(BaseRenderer):
     def __init__(self):
-        self.albedo = MP([1,1,1])
+        self.albedo = MP([1, 1, 1])
 
     def render(self, info: dict):
         b = info['b']

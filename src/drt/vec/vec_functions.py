@@ -16,6 +16,14 @@ def vnorm(a):
     l = F.sqrt(vdot(a, a))
     return a / F.maximum(l, xp.array([1e-6], a.dtype))
 
+"""
+def vcross(a, b):
+    B, _, H, W = a.shape[:4]
+    x = a[:, 1, :, :]*b[:, 2, :, :] - a[:, 2, :, :]*b[:, 1, :, :]
+    y = a[:, 2, :, :]*b[:, 0, :, :] - a[:, 0, :, :]*b[:, 2, :, :]
+    z = a[:, 0, :, :]*b[:, 1, :, :] - a[:, 1, :, :]*b[:, 0, :, :]
+    return F.concat([x, y, z], axis=1).reshape((B, 3, H, W))
+"""
 
 def vcross(a, b):
     B, _, H, W = a.shape[:4]

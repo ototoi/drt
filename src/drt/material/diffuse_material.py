@@ -18,6 +18,7 @@ class DiffuseMaterial(BaseMaterial):
         mask = info['b']
         xp = chainer.backend.get_array_module(mask)
         B, _, H, W = mask.shape[:4]
+
         if 'albedo' in info:
             albedo_old = info['albedo']
             albedo_new = F.broadcast_to(self.albedo.reshape((1, 3, 1, 1)), (B, 3, H, W))
@@ -26,5 +27,6 @@ class DiffuseMaterial(BaseMaterial):
             albedo_old = F.broadcast_to(xp.zeros((1, 1, 1, 1), dtype=xp.float32), (B, 3, H, W))
             albedo_new = F.broadcast_to(self.albedo.reshape((1, 3, 1, 1)), (B, 3, H, W))
             info['albedo'] = F.where(mask, albedo_new, albedo_old)
+        
         return info
 

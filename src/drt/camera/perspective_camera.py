@@ -13,25 +13,10 @@ from ..vec import vdot, vnorm, vcross
 from .base_camera import BaseCamera
 
 
-"""
-for y in range(H):
-    yy = 1 - 2 * (y + 0.5) / H
-    for x in range(W):
-        xx = 2 * (x + 0.5) / W - 1
-        yyy = yy * HH
-        xxx = xx * HH
-        r = xp.array([xxx, yyy, 1], np.float32)
-        r = r / xp.linalg.norm(r)
-        #r = np.array([0, 0, 1], np.float32)
-        rd[y, x, :] = r
-"""
-
 def create_axies(direction, up):
-    zaxis = direction
-    yaxis = up
+    zaxis = vnorm(direction.reshape((1, 3, 1, 1)))
+    yaxis = vnorm(up.reshape((1, 3, 1, 1)))
 
-    zaxis = zaxis.reshape((1, 3, 1, 1))
-    yaxis = yaxis.reshape((1, 3, 1, 1))
     xaxis = vnorm(vcross(yaxis, zaxis))
     yaxis = vnorm(vcross(zaxis, xaxis))
 

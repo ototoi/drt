@@ -74,12 +74,13 @@ def save_progress_image(odir, i, img):
     cv2.imwrite(path, img)
 
 class RaytraceUpdater(StandardUpdater):
-    def __init__(self, iterator, model, func, optimizer, odir, device=None):
+    def __init__(self, iterator, model, func, optimizer, odir, device=-1):
         super(RaytraceUpdater, self).__init__(iterator, optimizer, device=device)
         self.model = model
         self.func = func
         self.odir = odir
         self.count = 0
+        self.device = device
 
     def update_core(self):
         train_iter = self.get_iterator('main')
