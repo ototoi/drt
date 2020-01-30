@@ -3,7 +3,7 @@ drt - Differentiable Ray Tracer
 
 ## test
 ```
-python ./src/drt/test0.py --output ./data/test0.png
+python ./src/examples/backprop_camera_cornelbox.py --output ./data/test0.png
 ```
 
 then you can see below image.
